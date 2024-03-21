@@ -45,7 +45,7 @@ impl DerefMut for Time {
 
 impl Default for Time {
     fn default() -> Self {
-        Self::midnight().expect("Error Time default")
+        Self::midnight()
     }
 }
 
@@ -108,12 +108,12 @@ impl Time {
         Self::build(Local::now().format(BASE_TIME_FORMAT))
     }
 
-    pub fn midnight() -> Result<Self, String> {
-        let time = NaiveTime::from_hms_opt(0, 0, 0)?;
-        Ok(Self {
+    pub fn midnight() -> Self {
+        let time = NaiveTime::from_hms_opt(0, 0, 0).expect("Error Time midnight");
+        Self {
             time,
             format: BASE_TIME_FORMAT.to_string(),
-        })
+        }
     }
 
     pub fn is_in_future(&self) -> Result<bool, String> {

@@ -59,7 +59,7 @@ impl Time {
         Self::new(time, BASE_TIME_FORMAT)
     }
 
-    pub fn time(&self) -> NaiveTime {
+    pub fn get_time(&self) -> NaiveTime {
         self.time
     }
 
@@ -69,14 +69,14 @@ impl Time {
     }
 
     pub fn update(&mut self, unit: TimeUnit, value: i32) -> Result<(), String> {
-        let time = match unit {
+        let delta_time = match unit {
             TimeUnit::Hour => TimeDelta::new(value as i64 * 60 * 60, 0),
             TimeUnit::Minute => TimeDelta::new(value as i64 * 60, 0),
             TimeUnit::Second => TimeDelta::new(value as i64, 0),
         };
-        match time {
-            Some(time) => {
-                self.time += time;
+        match delta_time {
+            Some(delta_time) => {
+                self.time += delta_time;
                 Ok(())
             }
             None => Err(format!(
@@ -99,23 +99,11 @@ impl Time {
     }
 
     pub fn now() -> Result<Self, String> {
-        let date = NaiveTime::parse_from_str(
-            &Local::now().format(BASE_TIME_FORMAT).to_string(),
-            BASE_TIME_FORMAT,
-        )
-        .map_err(|e| format!("Error while parsing now time: {e:?}"))?;
-        Self::new(date, BASE_TIME_FORMAT)
+        Self::build(Local::now().format(BASE_TIME_FORMAT))
     }
 
     pub fn midnight() -> Result<Self, String> {
-        let time = match NaiveTime::from_hms_opt(0, 0, 0) {
-            Some(time) => time,
-            None => return Err("Error Time midnight".to_string()),
-        };
-        Ok(Self {
-            time,
-            format: BASE_TIME_FORMAT.to_string(),
-        })
+        Self::build("00:00:00")
     }
 
     pub fn is_in_future(&self) -> Result<bool, String> {

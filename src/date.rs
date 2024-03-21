@@ -59,7 +59,7 @@ impl Date {
         Self::new(date, BASE_DATE_FORMAT)
     }
 
-    pub fn date(&self) -> NaiveDate {
+    pub fn get_date(&self) -> NaiveDate {
         self.date
     }
 
@@ -110,16 +110,11 @@ impl Date {
     }
 
     pub fn today() -> Result<Self, String> {
-        let date = NaiveDate::parse_from_str(
-            &Local::now().format(BASE_DATE_FORMAT).to_string(),
-            BASE_DATE_FORMAT,
-        )
-        .map_err(|e| format!("Error while parsing now date: {e:?}"))?;
-        Self::new(date, BASE_DATE_FORMAT)
+        Self::build(Local::now().format(BASE_DATE_FORMAT))
     }
 
     pub fn is_in_future(&self) -> Result<bool, String> {
-        Ok(self.date > Self::today()?.date())
+        Ok(self.date > Self::today()?.date)
     }
 
     pub fn elapsed(&self, lhs: &Self) -> Duration {

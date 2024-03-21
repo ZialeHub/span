@@ -59,7 +59,7 @@ impl Date {
         Self::new(date, BASE_DATE_FORMAT)
     }
 
-    pub fn get_date(&self) -> NaiveDate {
+    pub fn date(&self) -> NaiveDate {
         self.date
     }
 

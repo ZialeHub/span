@@ -1,8 +1,23 @@
 use std::ops::{Deref, DerefMut};
 
 use chrono::{Local, NaiveDateTime, NaiveTime, TimeDelta, Timelike};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 const BASE_TIME_FORMAT: &str = "%H:%M:%S";
+
+pub fn time_to_str<S: Serializer>(time: &NaiveTime, serializer: S) -> Result<S::Ok, S::Error> {
+    time.format(BASE_TIME_FORMAT)
+        .to_string()
+        .serialize(serializer)
+}
+
+pub fn time_from_str<'de, D>(deserializer: D) -> Result<NaiveTime, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let time: String = Deserialize::deserialize(deserializer)?;
+    NaiveTime::parse_from_str(&time, BASE_TIME_FORMAT).map_err(de::Error::custom)
+}
 
 #[derive(Debug, Clone)]
 enum TimeUnit {
@@ -16,9 +31,9 @@ enum TimeUnit {
 /// const BASE_TIME_FORMAT: &str = "%H:%M:%S";
 ///
 /// BASE_TIME_FORMAT is the default format for time
-// TODO Find a way to implement Serialize and Deserialize for Time
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Time {
+    #[serde(serialize_with = "time_to_str", deserialize_with = "time_from_str")]
     pub time: NaiveTime,
     pub format: String,
 }
@@ -134,9 +149,9 @@ impl Time {
 }
 
 impl From<NaiveDateTime> for Time {
-    fn from(date: NaiveDateTime) -> Self {
+    fn from(datetime: NaiveDateTime) -> Self {
         Self {
-            time: date.time(),
+            time: datetime.time(),
             format: BASE_TIME_FORMAT.to_string(),
         }
     }
@@ -189,63 +204,111 @@ pub mod test {
 
     #[test]
     fn test_time_add_overflow() -> Result<(), String> {
-        let mut datetime = Time::build("00:00:00")?;
-        let new_datetime = datetime.update(TimeUnit::Hour, i32::MIN);
-        assert_eq!(new_datetime, Ok(()));
+        let mut time = Time::build("00:00:00")?;
+        let new_time = time.update(TimeUnit::Hour, i32::MIN);
+        assert_eq!(new_time, Ok(()));
         Ok(())
     }
 
     #[test]
     fn test_time_add_one_hour() -> Result<(), String> {
-        let mut datetime = Time::build("00:00:00")?;
-        let new_datetime = datetime.update(TimeUnit::Hour, 1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "01:00:00".to_string());
+        let mut time = Time::build("00:00:00")?;
+        let new_time = time.update(TimeUnit::Hour, 1);
+        assert_eq!(new_time, Ok(()));
+        assert_eq!(time.to_string(), "01:00:00".to_string());
         Ok(())
     }
 
     #[test]
     fn test_time_remove_one_hour() -> Result<(), String> {
-        let mut datetime = Time::build("00:00:00")?;
-        let new_datetime = datetime.update(TimeUnit::Hour, -1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "23:00:00".to_string());
+        let mut time = Time::build("00:00:00")?;
+        let new_time = time.update(TimeUnit::Hour, -1);
+        assert_eq!(new_time, Ok(()));
+        assert_eq!(time.to_string(), "23:00:00".to_string());
         Ok(())
     }
 
     #[test]
     fn test_time_add_one_minute() -> Result<(), String> {
-        let mut datetime = Time::build("00:00:00")?;
-        let new_datetime = datetime.update(TimeUnit::Minute, 1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "00:01:00".to_string());
+        let mut time = Time::build("00:00:00")?;
+        let new_time = time.update(TimeUnit::Minute, 1);
+        assert_eq!(new_time, Ok(()));
+        assert_eq!(time.to_string(), "00:01:00".to_string());
         Ok(())
     }
 
     #[test]
     fn test_time_remove_one_minute() -> Result<(), String> {
-        let mut datetime = Time::build("00:00:00")?;
-        let new_datetime = datetime.update(TimeUnit::Minute, -1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "23:59:00".to_string());
+        let mut time = Time::build("00:00:00")?;
+        let new_time = time.update(TimeUnit::Minute, -1);
+        assert_eq!(new_time, Ok(()));
+        assert_eq!(time.to_string(), "23:59:00".to_string());
         Ok(())
     }
 
     #[test]
     fn test_time_add_one_second() -> Result<(), String> {
-        let mut datetime = Time::build("00:00:00")?;
-        let new_datetime = datetime.update(TimeUnit::Second, 1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "00:00:01".to_string());
+        let mut time = Time::build("00:00:00")?;
+        let new_time = time.update(TimeUnit::Second, 1);
+        assert_eq!(new_time, Ok(()));
+        assert_eq!(time.to_string(), "00:00:01".to_string());
         Ok(())
     }
 
     #[test]
     fn test_time_remove_one_second() -> Result<(), String> {
-        let mut datetime = Time::build("00:00:00")?;
-        let new_datetime = datetime.update(TimeUnit::Second, -1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "23:59:59".to_string());
+        let mut time = Time::build("00:00:00")?;
+        let new_time = time.update(TimeUnit::Second, -1);
+        assert_eq!(new_time, Ok(()));
+        assert_eq!(time.to_string(), "23:59:59".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_time_serialize() -> Result<(), String> {
+        let time = Time::build("12:21:46")?;
+        let Ok(serialized) = serde_json::to_string(&time) else {
+            return Err("Error while serializing time".to_string());
+        };
+        assert_eq!(
+            serialized,
+            "{\"time\":\"12:21:46\",\"format\":\"%H:%M:%S\"}".to_string()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_time_deserialize() -> Result<(), String> {
+        let serialized = "{\"time\":\"12:21:46\",\"format\":\"%H:%M:%S\"}".to_string();
+        let Ok(time) = serde_json::from_str::<Time>(&serialized) else {
+            return Err("Error while deserializing time".to_string());
+        };
+        assert_eq!(time.to_string(), "12:21:46".to_string());
+        assert_eq!(time.format, BASE_TIME_FORMAT.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_time_serialize_format() -> Result<(), String> {
+        let time = Time::build("12:21:46")?.format("T%H_%M_%S");
+        let Ok(serialized) = serde_json::to_string(&time) else {
+            return Err("Error while serializing time".to_string());
+        };
+        assert_eq!(
+            serialized,
+            "{\"time\":\"12:21:46\",\"format\":\"T%H_%M_%S\"}".to_string()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_time_deserialize_format() -> Result<(), String> {
+        let serialized = "{\"time\":\"12:21:46\",\"format\":\"T%H_%M_%S\"}".to_string();
+        let Ok(time) = serde_json::from_str::<Time>(&serialized) else {
+            return Err("Error while deserializing time".to_string());
+        };
+        assert_eq!(time.to_string(), "T12_21_46".to_string());
+        assert_eq!(time.format, "T%H_%M_%S".to_string());
         Ok(())
     }
 }

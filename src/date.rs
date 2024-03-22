@@ -1,8 +1,23 @@
 use std::ops::{Deref, DerefMut};
 
 use chrono::{Datelike, Days, Duration, Local, Months, NaiveDate, NaiveDateTime};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 const BASE_DATE_FORMAT: &str = "%Y-%m-%d";
+
+pub fn date_to_str<S: Serializer>(date: &NaiveDate, serializer: S) -> Result<S::Ok, S::Error> {
+    date.format(BASE_DATE_FORMAT)
+        .to_string()
+        .serialize(serializer)
+}
+
+pub fn date_from_str<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let date: String = Deserialize::deserialize(deserializer)?;
+    NaiveDate::parse_from_str(&date, BASE_DATE_FORMAT).map_err(de::Error::custom)
+}
 
 #[derive(Debug, Clone)]
 enum DateUnit {
@@ -16,9 +31,9 @@ enum DateUnit {
 /// const BASE_DATE_FORMAT: &str = "%Y-%m-%d";
 ///
 /// BASE_DATE_FORMAT is the default format for date
-// TODO Find a way to implement Serialize and Deserialize for Time
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Date {
+    #[serde(serialize_with = "date_to_str", deserialize_with = "date_from_str")]
     pub date: NaiveDate,
     pub format: String,
 }
@@ -69,7 +84,7 @@ impl Date {
     }
 
     pub fn update(&mut self, unit: DateUnit, value: i32) -> Result<(), String> {
-        let datetime = match unit {
+        let date = match unit {
             DateUnit::Year if value > 0 => {
                 self.date.checked_add_months(Months::new(value as u32 * 12))
             }
@@ -85,7 +100,7 @@ impl Date {
                 .date
                 .checked_sub_days(Days::new(value.unsigned_abs() as u64)),
         };
-        match datetime {
+        match date {
             Some(date) => {
                 self.date = date;
                 Ok(())
@@ -182,10 +197,10 @@ pub mod test {
 
     #[test]
     fn test_date_add_overflow() -> Result<(), String> {
-        let mut datetime = Date::build("2023-10-09")?;
-        let new_datetime = datetime.update(DateUnit::Day, i32::MAX);
+        let mut date = Date::build("2023-10-09")?;
+        let new_date = date.update(DateUnit::Day, i32::MAX);
         assert_eq!(
-            new_datetime,
+            new_date,
             Err("Cannot Add/Remove 2147483647 Day to/from 2023-10-09".to_string())
         );
         Ok(())
@@ -193,55 +208,103 @@ pub mod test {
 
     #[test]
     fn test_date_add_one_year() -> Result<(), String> {
-        let mut datetime = Date::build("2023-10-09")?;
-        let new_datetime = datetime.update(DateUnit::Year, 1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "2024-10-09".to_string());
+        let mut date = Date::build("2023-10-09")?;
+        let new_date = date.update(DateUnit::Year, 1);
+        assert_eq!(new_date, Ok(()));
+        assert_eq!(date.to_string(), "2024-10-09".to_string());
         Ok(())
     }
 
     #[test]
     fn test_date_remove_one_year() -> Result<(), String> {
-        let mut datetime = Date::build("2023-10-09")?;
-        let new_datetime = datetime.update(DateUnit::Year, -1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "2022-10-09".to_string());
+        let mut date = Date::build("2023-10-09")?;
+        let new_date = date.update(DateUnit::Year, -1);
+        assert_eq!(new_date, Ok(()));
+        assert_eq!(date.to_string(), "2022-10-09".to_string());
         Ok(())
     }
 
     #[test]
     fn test_date_add_one_month() -> Result<(), String> {
-        let mut datetime = Date::build("2023-10-09")?;
-        let new_datetime = datetime.update(DateUnit::Month, 1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "2023-11-09".to_string());
+        let mut date = Date::build("2023-10-09")?;
+        let new_date = date.update(DateUnit::Month, 1);
+        assert_eq!(new_date, Ok(()));
+        assert_eq!(date.to_string(), "2023-11-09".to_string());
         Ok(())
     }
 
     #[test]
     fn test_date_remove_one_month() -> Result<(), String> {
-        let mut datetime = Date::build("2023-10-09")?;
-        let new_datetime = datetime.update(DateUnit::Month, -1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "2023-09-09".to_string());
+        let mut date = Date::build("2023-10-09")?;
+        let new_date = date.update(DateUnit::Month, -1);
+        assert_eq!(new_date, Ok(()));
+        assert_eq!(date.to_string(), "2023-09-09".to_string());
         Ok(())
     }
 
     #[test]
     fn test_date_add_one_day() -> Result<(), String> {
-        let mut datetime = Date::build("2023-10-09")?;
-        let new_datetime = datetime.update(DateUnit::Day, 1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "2023-10-10".to_string());
+        let mut date = Date::build("2023-10-09")?;
+        let new_date = date.update(DateUnit::Day, 1);
+        assert_eq!(new_date, Ok(()));
+        assert_eq!(date.to_string(), "2023-10-10".to_string());
         Ok(())
     }
 
     #[test]
     fn test_date_remove_one_day() -> Result<(), String> {
-        let mut datetime = Date::build("2023-10-09")?;
-        let new_datetime = datetime.update(DateUnit::Day, -1);
-        assert_eq!(new_datetime, Ok(()));
-        assert_eq!(datetime.to_string(), "2023-10-08".to_string());
+        let mut date = Date::build("2023-10-09")?;
+        let new_date = date.update(DateUnit::Day, -1);
+        assert_eq!(new_date, Ok(()));
+        assert_eq!(date.to_string(), "2023-10-08".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_date_serialize() -> Result<(), String> {
+        let date = Date::build("2023-10-09")?;
+        let Ok(serialized) = serde_json::to_string(&date) else {
+            return Err("Error while serializing date".to_string());
+        };
+        assert_eq!(
+            serialized,
+            "{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}".to_string()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_date_deserialize() -> Result<(), String> {
+        let serialized = "{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}".to_string();
+        let Ok(date) = serde_json::from_str::<Date>(&serialized) else {
+            return Err("Error while deserializing date".to_string());
+        };
+        assert_eq!(date.to_string(), "2023-10-09".to_string());
+        assert_eq!(date.format, BASE_DATE_FORMAT.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_date_serialize_format() -> Result<(), String> {
+        let date = Date::build("2023-10-09")?.format("%d/%m/%Y");
+        let Ok(serialized) = serde_json::to_string(&date) else {
+            return Err("Error while serializing date".to_string());
+        };
+        assert_eq!(
+            serialized,
+            "{\"date\":\"2023-10-09\",\"format\":\"%d/%m/%Y\"}".to_string()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_date_deserialize_format() -> Result<(), String> {
+        let serialized = "{\"date\":\"2023-10-09\",\"format\":\"%d/%m/%Y\"}".to_string();
+        let Ok(date) = serde_json::from_str::<Date>(&serialized) else {
+            return Err("Error while deserializing date".to_string());
+        };
+        assert_eq!(date.to_string(), "09/10/2023".to_string());
+        assert_eq!(date.format, "%d/%m/%Y".to_string());
         Ok(())
     }
 }

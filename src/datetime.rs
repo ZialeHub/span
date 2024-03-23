@@ -3,6 +3,8 @@ use std::ops::{Deref, DerefMut};
 use chrono::{Datelike, Days, Duration, Local, Months, NaiveDateTime, Timelike};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::{TimeRSError, TimeResult, Type};
+
 const BASE_DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 
 pub fn datetime_to_str<S: Serializer>(
@@ -69,11 +71,11 @@ impl DerefMut for DateTime {
 }
 
 impl DateTime {
-    pub fn new(datetime: impl ToString, format: impl ToString) -> Result<Self, String> {
+    pub fn new(datetime: impl ToString, format: impl ToString) -> TimeResult<Self> {
         let datetime =
             match NaiveDateTime::parse_from_str(&datetime.to_string(), &format.to_string()) {
                 Ok(datetime) => datetime,
-                Err(e) => return Err(format!("Error while parsing datetime: {e:?}")),
+                Err(e) => return Err(TimeRSError::Parse(Type::Datetime, e.to_string())),
             };
         Ok(Self {
             datetime,
@@ -81,11 +83,12 @@ impl DateTime {
         })
     }
 
-    pub fn build(datetime: impl ToString) -> Result<Self, String> {
-        let datetime = match NaiveDateTime::parse_from_str(&datetime.to_string(), BASE_DATETIME_FORMAT) {
-            Ok(datetime) => datetime,
-            Err(e) => return Err(format!("Error while parsing datetime into BASE_DATETIME_FORMAT '{BASE_DATETIME_FORMAT}': {e:?}")),
-        };
+    pub fn build(datetime: impl ToString) -> TimeResult<Self> {
+        let datetime =
+            match NaiveDateTime::parse_from_str(&datetime.to_string(), BASE_DATETIME_FORMAT) {
+                Ok(datetime) => datetime,
+                Err(e) => return Err(TimeRSError::Parse(Type::Datetime, e.to_string())),
+            };
         Ok(Self {
             datetime,
             format: BASE_DATETIME_FORMAT.to_string(),
@@ -101,7 +104,7 @@ impl DateTime {
         self
     }
 
-    pub fn update(&mut self, unit: DateTimeUnit, value: i32) -> Result<(), String> {
+    pub fn update(&mut self, unit: DateTimeUnit, value: i32) -> TimeResult<()> {
         let datetime = match unit {
             DateTimeUnit::Year if value > 0 => self
                 .datetime
@@ -136,14 +139,14 @@ impl DateTime {
                 self.datetime = datetime;
                 Ok(())
             }
-            None => Err(format!(
-                "Cannot Add/Remove {} {:?} to/from {}",
-                value, unit, self
+            None => Err(TimeRSError::InvalidUpdate(
+                Type::Datetime,
+                format!("Cannot Add/Remove {} {:?} to/from {}", value, unit, self),
             )),
         }
     }
 
-    pub fn next(&mut self, unit: DateTimeUnit) -> Result<(), String> {
+    pub fn next(&mut self, unit: DateTimeUnit) -> TimeResult<()> {
         self.update(unit, 1)
     }
 
@@ -158,11 +161,11 @@ impl DateTime {
         }
     }
 
-    pub fn now() -> Result<Self, String> {
+    pub fn now() -> TimeResult<Self> {
         Self::build(Local::now().format(BASE_DATETIME_FORMAT))
     }
 
-    pub fn is_in_future(&self) -> Result<bool, String> {
+    pub fn is_in_future(&self) -> TimeResult<bool> {
         let now = Self::build(Local::now().format(BASE_DATETIME_FORMAT))?;
         Ok(self.datetime > now.datetime)
     }
@@ -208,7 +211,7 @@ impl DateTime {
         self.datetime.and_utc().timestamp()
     }
 
-    pub fn clear_time(&self) -> Result<Self, String> {
+    pub fn clear_time(&self) -> TimeResult<Self> {
         let datetime = self
             .datetime
             .with_hour(0)
@@ -218,56 +221,69 @@ impl DateTime {
             .inspect(|datetime| {
                 datetime.with_second(0);
             })
-            .ok_or("Error while setting start of day".to_string())?;
+            .ok_or(TimeRSError::InvalidUpdate(
+                Type::Datetime,
+                "Error while setting start of day".to_string(),
+            ))?;
         DateTime::try_from(datetime)
     }
 }
 
 impl TryFrom<NaiveDateTime> for DateTime {
-    type Error = String;
+    type Error = TimeRSError;
     fn try_from(datetime: NaiveDateTime) -> Result<Self, Self::Error> {
         Self::build(datetime)
     }
 }
 
 impl TryFrom<i32> for DateTime {
-    type Error = String;
+    type Error = TimeRSError;
     fn try_from(timestamp: i32) -> Result<Self, Self::Error> {
         let datetime = match chrono::DateTime::from_timestamp(timestamp as i64, 0) {
             Some(datetime) => datetime,
-            None => return Err("Error while parsing timestamp from i32".to_string()),
+            None => {
+                return Err(TimeRSError::Parse(
+                    Type::Datetime,
+                    "Error while parsing timestamp from i32".to_string(),
+                ));
+            }
         };
         Self::build(datetime)
     }
 }
 
 impl TryFrom<i64> for DateTime {
-    type Error = String;
+    type Error = TimeRSError;
     fn try_from(timestamp: i64) -> Result<Self, Self::Error> {
         let datetime = match chrono::DateTime::from_timestamp(timestamp, 0) {
             Some(datetime) => datetime,
-            None => return Err("Error while parsing timestamp from i64".to_string()),
+            None => {
+                return Err(TimeRSError::Parse(
+                    Type::Datetime,
+                    "Error while parsing timestamp from i64".to_string(),
+                ));
+            }
         };
         Self::build(datetime)
     }
 }
 
 impl TryFrom<(String, String)> for DateTime {
-    type Error = String;
+    type Error = TimeRSError;
     fn try_from((datetime, format): (String, String)) -> Result<Self, Self::Error> {
         Self::new(datetime, format)
     }
 }
 
 impl TryFrom<(&str, &str)> for DateTime {
-    type Error = String;
+    type Error = TimeRSError;
     fn try_from((datetime, format): (&str, &str)) -> Result<Self, Self::Error> {
         Self::new(datetime, format)
     }
 }
 
 impl TryFrom<&str> for DateTime {
-    type Error = String;
+    type Error = TimeRSError;
     fn try_from(datetime: &str) -> Result<Self, Self::Error> {
         Self::build(datetime)
     }
@@ -278,18 +294,21 @@ pub mod test {
     use super::*;
 
     #[test]
-    fn test_datetime_add_overflow() -> Result<(), String> {
+    fn test_datetime_add_overflow() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Day, i32::MAX);
         assert_eq!(
             new_datetime,
-            Err("Cannot Add/Remove 2147483647 Day to/from 2023-10-09 00:00:00".to_string())
+            Err(TimeRSError::InvalidUpdate(
+                Type::Datetime,
+                "Cannot Add/Remove 2147483647 Day to/from 2023-10-09 00:00:00".to_string()
+            ))
         );
         Ok(())
     }
 
     #[test]
-    fn test_datetime_add_one_year() -> Result<(), String> {
+    fn test_datetime_add_one_year() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Year, 1);
         assert_eq!(new_datetime, Ok(()));
@@ -298,7 +317,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_remove_one_year() -> Result<(), String> {
+    fn test_datetime_remove_one_year() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Year, -1);
         assert_eq!(new_datetime, Ok(()));
@@ -307,7 +326,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_add_one_month() -> Result<(), String> {
+    fn test_datetime_add_one_month() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Month, 1);
         assert_eq!(new_datetime, Ok(()));
@@ -316,7 +335,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_remove_one_month() -> Result<(), String> {
+    fn test_datetime_remove_one_month() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Month, -1);
         assert_eq!(new_datetime, Ok(()));
@@ -325,7 +344,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_add_one_day() -> Result<(), String> {
+    fn test_datetime_add_one_day() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Day, 1);
         assert_eq!(new_datetime, Ok(()));
@@ -334,7 +353,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_remove_one_day() -> Result<(), String> {
+    fn test_datetime_remove_one_day() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Day, -1);
         assert_eq!(new_datetime, Ok(()));
@@ -343,7 +362,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_add_one_hour() -> Result<(), String> {
+    fn test_datetime_add_one_hour() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Hour, 1);
         assert_eq!(new_datetime, Ok(()));
@@ -352,7 +371,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_remove_one_hour() -> Result<(), String> {
+    fn test_datetime_remove_one_hour() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Hour, -1);
         assert_eq!(new_datetime, Ok(()));
@@ -361,7 +380,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_add_one_minute() -> Result<(), String> {
+    fn test_datetime_add_one_minute() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Minute, 1);
         assert_eq!(new_datetime, Ok(()));
@@ -370,7 +389,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_remove_one_minute() -> Result<(), String> {
+    fn test_datetime_remove_one_minute() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Minute, -1);
         assert_eq!(new_datetime, Ok(()));
@@ -379,7 +398,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_add_one_second() -> Result<(), String> {
+    fn test_datetime_add_one_second() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Second, 1);
         assert_eq!(new_datetime, Ok(()));
@@ -388,7 +407,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_remove_one_second() -> Result<(), String> {
+    fn test_datetime_remove_one_second() -> TimeResult<()> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         let new_datetime = datetime.update(DateTimeUnit::Second, -1);
         assert_eq!(new_datetime, Ok(()));
@@ -397,10 +416,10 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_serialize() -> Result<(), String> {
+    fn test_datetime_serialize() -> TimeResult<()> {
         let datetime = DateTime::build("2023-10-09 00:00:00")?;
         let Ok(serialized) = serde_json::to_string(&datetime) else {
-            return Err("Error while serializing datetime".to_string());
+            panic!("Error while serializing datetime");
         };
         assert_eq!(
             serialized,
@@ -410,11 +429,11 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_deserialize() -> Result<(), String> {
+    fn test_datetime_deserialize() -> TimeResult<()> {
         let serialized =
             "{\"datetime\":\"2023-10-09 00:00:00\",\"format\":\"%Y-%m-%d %H:%M:%S\"}".to_string();
         let Ok(datetime) = serde_json::from_str::<DateTime>(&serialized) else {
-            return Err("Error while deserializing datetime".to_string());
+            panic!("Error while deserializing datetime");
         };
         assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
         assert_eq!(datetime.format, BASE_DATETIME_FORMAT.to_string());
@@ -422,10 +441,10 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_serialize_format() -> Result<(), String> {
+    fn test_datetime_serialize_format() -> TimeResult<()> {
         let datetime = DateTime::build("2023-10-09 00:00:00")?.format("%d/%m/%YT%H_%M_%S");
         let Ok(serialized) = serde_json::to_string(&datetime) else {
-            return Err("Error while serializing datetime".to_string());
+            panic!("Error while serializing datetime");
         };
         assert_eq!(
             serialized,
@@ -435,11 +454,11 @@ pub mod test {
     }
 
     #[test]
-    fn test_datetime_deserialize_format() -> Result<(), String> {
+    fn test_datetime_deserialize_format() -> TimeResult<()> {
         let serialized =
             "{\"datetime\":\"2023-10-09 00:00:00\",\"format\":\"%d/%m/%YT%H_%M_%S\"}".to_string();
         let Ok(datetime) = serde_json::from_str::<DateTime>(&serialized) else {
-            return Err("Error while deserializing datetime".to_string());
+            panic!("Error while deserializing datetime");
         };
         assert_eq!(datetime.to_string(), "09/10/2023T00_00_00".to_string());
         assert_eq!(datetime.format, "%d/%m/%YT%H_%M_%S".to_string());

@@ -1,6 +1,6 @@
 use std::{
     ops::Deref,
-    sync::{Arc, Mutex},
+    sync::{Arc, RwLock},
 };
 
 use lazy_static::lazy_static;
@@ -10,26 +10,27 @@ pub mod datetime;
 pub mod time;
 
 lazy_static! {
-    static ref BASE_DATE_FORMAT: Arc<Mutex<&'static str>> = Arc::new(Mutex::new("%Y-%m-%d"));
-    static ref BASE_TIME_FORMAT: Arc<Mutex<&'static str>> = Arc::new(Mutex::new("%H:%M:%S"));
-    static ref BASE_DATETIME_FORMAT: Arc<Mutex<Option<&'static str>>> = Arc::new(Mutex::new(None));
+    static ref BASE_DATE_FORMAT: Arc<RwLock<&'static str>> = Arc::new(RwLock::new("%Y-%m-%d"));
+    static ref BASE_TIME_FORMAT: Arc<RwLock<&'static str>> = Arc::new(RwLock::new("%H:%M:%S"));
+    static ref BASE_DATETIME_FORMAT: Arc<RwLock<Option<&'static str>>> =
+        Arc::new(RwLock::new(None));
 }
 
 impl BASE_DATE_FORMAT {
     pub fn get(&self) -> &'static str {
-        &self.lock().unwrap()
+        &self.read().unwrap()
     }
 }
 
 impl BASE_TIME_FORMAT {
     pub fn get(&self) -> &'static str {
-        &self.lock().unwrap()
+        &self.read().unwrap()
     }
 }
 
 impl BASE_DATETIME_FORMAT {
     pub fn get(&self) -> String {
-        match self.lock().unwrap().deref() {
+        match self.read().unwrap().deref() {
             Some(format) => format.to_string(),
             None => format!("{} {}", BASE_DATE_FORMAT.get(), BASE_TIME_FORMAT.get()),
         }
@@ -65,16 +66,16 @@ impl TimeBuilder {
 
     pub fn build(&self) {
         match self.date_format {
-            Some(date_format) => *BASE_DATE_FORMAT.lock().unwrap() = date_format,
-            None => *BASE_DATE_FORMAT.lock().unwrap() = "%Y-%m-%d",
+            Some(date_format) => *BASE_DATE_FORMAT.write().unwrap() = date_format,
+            None => *BASE_DATE_FORMAT.write().unwrap() = "%Y-%m-%d",
         }
         match self.time_format {
-            Some(time_format) => *BASE_TIME_FORMAT.lock().unwrap() = time_format,
-            None => *BASE_TIME_FORMAT.lock().unwrap() = "%H:%M:%S",
+            Some(time_format) => *BASE_TIME_FORMAT.write().unwrap() = time_format,
+            None => *BASE_TIME_FORMAT.write().unwrap() = "%H:%M:%S",
         }
         match self.datetime_format {
-            Some(datetime_format) => *BASE_DATETIME_FORMAT.lock().unwrap() = Some(datetime_format),
-            None => *BASE_DATETIME_FORMAT.lock().unwrap() = None,
+            Some(datetime_format) => *BASE_DATETIME_FORMAT.write().unwrap() = Some(datetime_format),
+            None => *BASE_DATETIME_FORMAT.write().unwrap() = None,
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use chrono::{Datelike, Days, Duration, Local, Months, NaiveDate, NaiveDateTime};
+use chrono::{Datelike, Days, Duration, Local, Months, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
@@ -177,8 +177,27 @@ impl Date {
     pub fn unit_in_between(&self, unit: DateUnit, lhs: &Self) -> i64 {
         match unit {
             DateUnit::Year => self.date.year() as i64 - lhs.date.year() as i64,
-            DateUnit::Month => self.date.month() as i64 - lhs.date.month() as i64,
-            DateUnit::Day => self.date.day() as i64 - lhs.date.day() as i64,
+            DateUnit::Month => {
+                self.date.year() as i64 * 12 + self.date.month() as i64
+                    - (lhs.date.year() as i64 * 12 + lhs.date.month() as i64)
+            }
+            DateUnit::Day => {
+                let self_utc = Utc::now()
+                    .with_year(self.year())
+                    .unwrap()
+                    .with_month(self.month())
+                    .unwrap()
+                    .with_day(self.day())
+                    .unwrap();
+                let lhs_utc = Utc::now()
+                    .with_year(lhs.year())
+                    .unwrap()
+                    .with_month(lhs.month())
+                    .unwrap()
+                    .with_day(lhs.day())
+                    .unwrap();
+                self_utc.signed_duration_since(lhs_utc).num_days()
+            }
         }
     }
 }
@@ -231,10 +250,12 @@ impl TryFrom<&str> for Date {
 
 #[cfg(test)]
 pub mod test {
+    use chrono::TimeDelta;
+
     use super::*;
 
     #[test]
-    fn test_date_add_overflow() -> Result<(), SpanError> {
+    fn date_add_overflow() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         let new_date = date.update(DateUnit::Day, i32::MAX);
         assert_eq!(
@@ -248,7 +269,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_add_one_year() -> Result<(), SpanError> {
+    fn date_add_one_year() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         let new_date = date.update(DateUnit::Year, 1);
         assert_eq!(new_date, Ok(()));
@@ -257,7 +278,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_remove_one_year() -> Result<(), SpanError> {
+    fn date_remove_one_year() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         let new_date = date.update(DateUnit::Year, -1);
         assert_eq!(new_date, Ok(()));
@@ -266,7 +287,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_add_one_month() -> Result<(), SpanError> {
+    fn date_add_one_month() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         let new_date = date.update(DateUnit::Month, 1);
         assert_eq!(new_date, Ok(()));
@@ -275,7 +296,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_remove_one_month() -> Result<(), SpanError> {
+    fn date_remove_one_month() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         let new_date = date.update(DateUnit::Month, -1);
         assert_eq!(new_date, Ok(()));
@@ -284,7 +305,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_add_one_day() -> Result<(), SpanError> {
+    fn date_add_one_day() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         let new_date = date.update(DateUnit::Day, 1);
         assert_eq!(new_date, Ok(()));
@@ -293,7 +314,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_remove_one_day() -> Result<(), SpanError> {
+    fn date_remove_one_day() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         let new_date = date.update(DateUnit::Day, -1);
         assert_eq!(new_date, Ok(()));
@@ -302,7 +323,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_serialize() -> Result<(), SpanError> {
+    fn date_serialize() -> Result<(), SpanError> {
         let date = Date::build("2023-10-09")?;
         let Ok(serialized) = serde_json::to_string(&date) else {
             panic!("Error while serializing date");
@@ -315,7 +336,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_deserialize() -> Result<(), SpanError> {
+    fn date_deserialize() -> Result<(), SpanError> {
         let serialized = "{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}".to_string();
         let Ok(date) = serde_json::from_str::<Date>(&serialized) else {
             panic!("Error while deserializing date");
@@ -326,7 +347,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_serialize_format() -> Result<(), SpanError> {
+    fn date_serialize_format() -> Result<(), SpanError> {
         let date = Date::build("2023-10-09")?.format("%d/%m/%Y");
         let Ok(serialized) = serde_json::to_string(&date) else {
             panic!("Error while serializing date");
@@ -339,13 +360,154 @@ pub mod test {
     }
 
     #[test]
-    fn test_date_deserialize_format() -> Result<(), SpanError> {
+    fn date_deserialize_format() -> Result<(), SpanError> {
         let serialized = "{\"date\":\"2023-10-09\",\"format\":\"%d/%m/%Y\"}".to_string();
         let Ok(date) = serde_json::from_str::<Date>(&serialized) else {
             panic!("Error while deserializing date");
         };
         assert_eq!(date.to_string(), "09/10/2023".to_string());
         assert_eq!(date.format, "%d/%m/%Y".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn next_month() -> Result<(), SpanError> {
+        let mut date = Date::build("2023-10-09")?;
+        date.next(DateUnit::Month)?;
+        assert_eq!(date.to_string(), "2023-11-09".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn next_minute() -> Result<(), SpanError> {
+        let mut date = Date::build("2023-10-09")?;
+        date.next(DateUnit::Year)?;
+        assert_eq!(date.to_string(), "2024-10-09".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn next_month_on_december() -> Result<(), SpanError> {
+        let mut date = Date::build("2023-12-09")?;
+        date.next(DateUnit::Month)?;
+        assert_eq!(date.to_string(), "2024-01-09".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn next_day_28_february_leap_year() -> Result<(), SpanError> {
+        let mut date = Date::build("2024-02-28")?;
+        date.next(DateUnit::Day)?;
+        assert_eq!(date.to_string(), "2024-02-29".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn next_day_28_february_non_leap_year() -> Result<(), SpanError> {
+        let mut date = Date::build("2023-02-28")?;
+        date.next(DateUnit::Day)?;
+        assert_eq!(date.to_string(), "2023-03-01".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn matches_every_unit_in_date() -> Result<(), SpanError> {
+        let date = Date::build("2023-10-09")?;
+        assert!(date.matches(DateUnit::Year, 2023));
+        assert!(date.matches(DateUnit::Month, 10));
+        assert!(date.matches(DateUnit::Day, 9));
+        Ok(())
+    }
+
+    #[test]
+    fn is_in_future_yesterday() -> Result<(), SpanError> {
+        let mut date = Date::today()?;
+        date.update(DateUnit::Day, -1)?;
+        assert!(!date.is_in_future()?);
+        Ok(())
+    }
+
+    #[test]
+    fn is_in_future_tomorrow() -> Result<(), SpanError> {
+        let mut date = Date::today()?;
+        date.update(DateUnit::Day, 1)?;
+        assert!(date.is_in_future()?);
+        Ok(())
+    }
+
+    #[test]
+    fn is_in_future_now() -> Result<(), SpanError> {
+        let date = Date::today()?;
+        assert!(!date.is_in_future()?);
+        Ok(())
+    }
+
+    #[test]
+    fn elapsed_one_year() -> Result<(), SpanError> {
+        let date = Date::build("2023-10-09")?;
+        let lhs = Date::build("2022-10-09")?;
+        assert_eq!(date.elapsed(&lhs), TimeDelta::try_days(365).unwrap());
+        Ok(())
+    }
+
+    #[test]
+    fn elapsed_one_second() -> Result<(), SpanError> {
+        let date = Date::build("2023-10-09")?;
+        let lhs = Date::build("2023-10-02")?;
+        assert_eq!(date.elapsed(&lhs), TimeDelta::try_weeks(1).unwrap());
+        Ok(())
+    }
+
+    #[test]
+    fn elapsed_multiple_units() -> Result<(), SpanError> {
+        let date = Date::build("2024-02-12")?;
+        let lhs = Date::build("2023-02-08")?;
+        assert_eq!(
+            date.elapsed(&lhs),
+            TimeDelta::try_weeks(52)
+                .unwrap()
+                .checked_add(&TimeDelta::try_days(5).unwrap())
+                .unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn unit_in_between() -> Result<(), SpanError> {
+        let date = Date::build("2023-10-09")?;
+        let lhs = Date::build("2020-02-08")?;
+        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs);
+        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs);
+        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs);
+        assert_eq!(years_in_between, 3);
+        assert_eq!(months_in_between, years_in_between * 12 + 8);
+        assert_eq!(days_in_between, 1338);
+        Ok(())
+    }
+
+    #[test]
+    fn unit_in_between_leap_year_days() -> Result<(), SpanError> {
+        let date = Date::build("2024-03-12")?;
+        let lhs = Date::build("2024-01-12")?;
+        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs);
+        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs);
+        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs);
+        assert_eq!(years_in_between, 0);
+        assert_eq!(months_in_between, years_in_between * 12 + 2);
+        assert_eq!(days_in_between, 59);
+        Ok(())
+    }
+
+    #[test]
+    fn unit_in_between_non_leap_year_days() -> Result<(), SpanError> {
+        let date = Date::build("2023-03-12")?;
+        let lhs = Date::build("2023-01-12")?;
+        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs);
+        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs);
+        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs);
+        assert_eq!(years_in_between, 0);
+        assert_eq!(months_in_between, years_in_between * 12 + 2);
+        assert_eq!(days_in_between, 58);
         Ok(())
     }
 }

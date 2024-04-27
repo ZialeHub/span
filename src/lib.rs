@@ -48,7 +48,7 @@ pub mod test {
     use prelude::*;
 
     #[test]
-    fn test_log_error_datetime_parse() {
+    fn log_error_datetime_parse() {
         let datetime = DateTime::build("09-10-2023 00_00_00");
         let _ = datetime.inspect_err(|e| {
             assert_eq!(
@@ -59,7 +59,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_log_error_datetime_parse_timestamp() {
+    fn log_error_datetime_parse_timestamp() {
         let err = SpanError::DateTime(
             Box::new(SpanError::ParseFromTimestamp(
                 "parse_from_timestamp error".to_string(),
@@ -73,7 +73,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_log_error_datetime_invalid_update() {
+    fn log_error_datetime_invalid_update() {
         let err = SpanError::DateTime(
             Box::new(SpanError::InvalidUpdate(
                 "Cannot add x Day to datetime error".to_string(),
@@ -87,7 +87,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_log_error_date_parse() {
+    fn log_error_date_parse() {
         let datetime = Date::build("10-31-2023");
         let _ = datetime.inspect_err(|e| {
             assert_eq!(e.to_string(), "Date ➤  ParseFromStr: input is out of range")
@@ -95,7 +95,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_log_error_date_invalid_update() {
+    fn log_error_date_invalid_update() {
         let err = SpanError::Date(
             Box::new(SpanError::InvalidUpdate(
                 "Cannot add x Month to date error".to_string(),
@@ -109,7 +109,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_log_error_time_parse() {
+    fn log_error_time_parse() {
         let time = Time::build("00_00_00");
         let _ = time.inspect_err(|e| {
             assert_eq!(
@@ -120,7 +120,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_log_error_time_invalid_update() {
+    fn log_error_time_invalid_update() {
         let err = SpanError::Time(
             Box::new(SpanError::InvalidUpdate(
                 "Cannot add x Second to time error".to_string(),
@@ -133,7 +133,7 @@ pub mod test {
         )
     }
     #[test]
-    fn test_builder_format_default() -> Result<(), SpanError> {
+    fn builder_format_default() -> Result<(), SpanError> {
         SpanBuilder::builder().build();
         let datetime = datetime::DateTime::build("2023-01-01 12:00:00")?;
         assert_eq!(datetime.to_string(), "2023-01-01 12:00:00");
@@ -148,7 +148,7 @@ pub mod test {
     /// Tests are running in parallel, and changing the global state might affect other tests
     #[test]
     #[ignore]
-    fn test_builder_format_build() -> Result<(), SpanError> {
+    fn builder_format_build() -> Result<(), SpanError> {
         SpanBuilder::builder()
             .datetime_format("%d/%m/%YT%H_%M_%S")
             .date_format("%d/%m/%Y")
@@ -162,7 +162,7 @@ pub mod test {
 
     #[test]
     #[ignore]
-    fn test_builder_format_build_ignored() -> Result<(), SpanError> {
+    fn builder_format_build_ignored() -> Result<(), SpanError> {
         SpanBuilder::builder()
             .datetime_format("%d/%m/%YT%H_%M_%S")
             .date_format("%d/%m/%Y")
@@ -176,7 +176,7 @@ pub mod test {
 
     #[test]
     #[ignore]
-    fn test_builder_format_build_datetime_skipped() -> Result<(), SpanError> {
+    fn builder_format_build_datetime_skipped() -> Result<(), SpanError> {
         SpanBuilder::builder()
             .date_format("%d/%m/%Y")
             .time_format("%H_%M_%S")

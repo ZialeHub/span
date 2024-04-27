@@ -2,43 +2,43 @@ name: Rust CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - "**"
+    branches: ["**"]
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  inspection-quality-checks:
+    name: "Inspection: Quality Checks (fmt, clippy, build, unit tests)"
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
+        uses: dtolnay/rust-toolchain@stable
 
       # caches rust dependencies, will improve speed
       # Thought we should be careful and monitor cache size over time.
-      - name: Cache Cargo registry
-        uses: actions/cache@v2
+      - name: Cache ~/.cargo
+        uses: actions/cache@v4
+        id: cargo_cache
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-
+          key: cargo2-${{ hashFiles('Cargo.lock', '**/Cargo.toml') }}
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/git
+            ~/.cargo/registry
 
       - name: Format with rustfmt
         run: cargo fmt --all -- --check
 
       - name: Lint with clippy
-        run: cargo clippy --all -- -D warnings
+        run: cargo clippy --all --all-features --tests -- -D warnings
 
       - name: Cargo test
-        run: cargo test --all --verbose
+        run: cargo test --all-features --verbose
 
       - name: Cargo build
         run: cargo build --release

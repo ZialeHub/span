@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use chrono::{Local, NaiveDateTime, NaiveTime, TimeDelta, Timelike};
+use chrono::{Local, NaiveDateTime, NaiveTime, TimeDelta, Timelike, Utc};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
@@ -246,6 +246,28 @@ impl TryFrom<&str> for Time {
 
     fn try_from(time: &str) -> Result<Self, Self::Error> {
         Self::build(time)
+    }
+}
+
+impl TryFrom<chrono::DateTime<Utc>> for Time {
+    type Error = SpanError;
+    fn try_from(value: chrono::DateTime<Utc>) -> Result<Self, Self::Error> {
+        Ok(value.naive_utc().into())
+    }
+}
+
+impl TryFrom<&Time> for chrono::DateTime<Utc> {
+    type Error = SpanError;
+    fn try_from(value: &Time) -> Result<Self, Self::Error> {
+        let date = value.time;
+        match Utc::now()
+            .with_hour(date.hour())
+            .and_then(|utc| utc.with_minute(date.minute()))
+            .and_then(|utc| utc.with_second(date.second()))
+        {
+            Some(utc) => Ok(utc),
+            None => Err(SpanError::InvalidUtc).err_ctx(TimeError),
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use chrono::{Datelike, Days, Duration, Local, Months, NaiveDateTime, Timelike};
+use chrono::{Datelike, Days, Duration, Local, Months, NaiveDateTime, Timelike, Utc};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
@@ -321,6 +321,31 @@ impl TryFrom<&str> for DateTime {
     type Error = SpanError;
     fn try_from(datetime: &str) -> Result<Self, Self::Error> {
         Self::build(datetime)
+    }
+}
+
+impl TryFrom<chrono::DateTime<Utc>> for DateTime {
+    type Error = SpanError;
+    fn try_from(value: chrono::DateTime<Utc>) -> Result<Self, Self::Error> {
+        Ok(value.naive_utc().try_into()?)
+    }
+}
+
+impl TryFrom<&DateTime> for chrono::DateTime<Utc> {
+    type Error = SpanError;
+    fn try_from(value: &DateTime) -> Result<Self, Self::Error> {
+        let date = value.datetime;
+        match Utc::now()
+            .with_year(date.year())
+            .and_then(|utc| utc.with_month(date.month()))
+            .and_then(|utc| utc.with_day(date.day()))
+            .and_then(|utc| utc.with_hour(date.hour()))
+            .and_then(|utc| utc.with_minute(date.minute()))
+            .and_then(|utc| utc.with_second(date.second()))
+        {
+            Some(utc) => Ok(utc),
+            None => Err(SpanError::InvalidUtc).err_ctx(DateTimeError),
+        }
     }
 }
 

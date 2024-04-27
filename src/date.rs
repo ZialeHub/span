@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use chrono::{Datelike, Days, Duration, Local, Months, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono::{Datelike, Days, Duration, Local, Months, NaiveDate, NaiveDateTime, Utc};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
@@ -174,31 +174,19 @@ impl Date {
     }
 
     /// Number of [DateUnit] between two [Date]
-    pub fn unit_in_between(&self, unit: DateUnit, lhs: &Self) -> i64 {
-        match unit {
+    pub fn unit_in_between(&self, unit: DateUnit, lhs: &Self) -> Result<i64, SpanError> {
+        Ok(match unit {
             DateUnit::Year => self.date.year() as i64 - lhs.date.year() as i64,
             DateUnit::Month => {
                 self.date.year() as i64 * 12 + self.date.month() as i64
                     - (lhs.date.year() as i64 * 12 + lhs.date.month() as i64)
             }
             DateUnit::Day => {
-                let self_utc = Utc::now()
-                    .with_year(self.year())
-                    .unwrap()
-                    .with_month(self.month())
-                    .unwrap()
-                    .with_day(self.day())
-                    .unwrap();
-                let lhs_utc = Utc::now()
-                    .with_year(lhs.year())
-                    .unwrap()
-                    .with_month(lhs.month())
-                    .unwrap()
-                    .with_day(lhs.day())
-                    .unwrap();
+                let self_utc: chrono::DateTime<Utc> = self.try_into()?;
+                let lhs_utc: chrono::DateTime<Utc> = lhs.try_into()?;
                 self_utc.signed_duration_since(lhs_utc).num_days()
             }
-        }
+        })
     }
 }
 
@@ -245,6 +233,28 @@ impl TryFrom<&str> for Date {
     type Error = SpanError;
     fn try_from(date: &str) -> Result<Self, Self::Error> {
         Self::new(date, BASE_DATE_FORMAT.get())
+    }
+}
+
+impl TryFrom<chrono::DateTime<Utc>> for Date {
+    type Error = SpanError;
+    fn try_from(value: chrono::DateTime<Utc>) -> Result<Self, Self::Error> {
+        Ok(value.naive_utc().into())
+    }
+}
+
+impl TryFrom<&Date> for chrono::DateTime<Utc> {
+    type Error = SpanError;
+    fn try_from(value: &Date) -> Result<Self, Self::Error> {
+        let date = value.date;
+        match Utc::now()
+            .with_year(date.year())
+            .and_then(|utc| utc.with_month(date.month()))
+            .and_then(|utc| utc.with_day(date.day()))
+        {
+            Some(utc) => Ok(utc),
+            None => Err(SpanError::InvalidUtc).err_ctx(DateError),
+        }
     }
 }
 
@@ -476,9 +486,9 @@ pub mod test {
     fn unit_in_between() -> Result<(), SpanError> {
         let date = Date::build("2023-10-09")?;
         let lhs = Date::build("2020-02-08")?;
-        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs);
-        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs);
-        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs);
+        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs)?;
+        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs)?;
+        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs)?;
         assert_eq!(years_in_between, 3);
         assert_eq!(months_in_between, years_in_between * 12 + 8);
         assert_eq!(days_in_between, 1338);
@@ -489,9 +499,9 @@ pub mod test {
     fn unit_in_between_leap_year_days() -> Result<(), SpanError> {
         let date = Date::build("2024-03-12")?;
         let lhs = Date::build("2024-01-12")?;
-        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs);
-        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs);
-        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs);
+        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs)?;
+        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs)?;
+        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 59);
@@ -502,9 +512,9 @@ pub mod test {
     fn unit_in_between_non_leap_year_days() -> Result<(), SpanError> {
         let date = Date::build("2023-03-12")?;
         let lhs = Date::build("2023-01-12")?;
-        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs);
-        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs);
-        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs);
+        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs)?;
+        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs)?;
+        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 58);

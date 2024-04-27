@@ -1,5 +1,7 @@
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum SpanError {
+    #[error("Invalid Utc TryFrom / TryInto")]
+    InvalidUtc,
     #[error("ParseFromStr: {0}")]
     ParseFromStr(#[from] chrono::ParseError),
     #[error("ParseFromTimestamp: {0}")]

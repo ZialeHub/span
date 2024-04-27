@@ -379,7 +379,7 @@ pub mod test {
     }
 
     #[test]
-    fn next_minute() -> Result<(), SpanError> {
+    fn next_year() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         date.next(DateUnit::Year)?;
         assert_eq!(date.to_string(), "2024-10-09".to_string());

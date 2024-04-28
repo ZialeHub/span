@@ -38,27 +38,35 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Format with `cargo rustfmt`
+      - name: Vulnerabilities Check
+        continue-on-error: true
+        run: cargo audit
+
+      - name: Format Check
         continue-on-error: true
         run: cargo fmt --all -- --check
 
-      - name: Lint with `cargo clippy`
+      - name: Clippy Lint
         continue-on-error: true
         run: cargo clippy --all --all-features --tests -- -D warnings
 
-      - name: Unit Test with `cargo test`
+      - name: Unit Test
         continue-on-error: true
         run: cargo test --all-features --verbose
 
-      - name: Build with `cargo build`
+      - name: Release Build Check
         continue-on-error: true
         run: cargo build --release
 
+      - name: Unused Dependencies Check
+        continue-on-error: true
+        run: cargo +nightly udeps
+
         # OUTDATED=$(cargo outdated --format json | jq -r '.[].newest.version' | grep -vE '^(dev-dependencies|unknown)$')
-      - name: Warn outdated dependencies with `cargo outdated`
+      - name: Warn for outdated dependencies
         run: |
           set +e
-          OUTDATED=$(cargo update --dry-run | grep -vE '^(Updating|Downloading|Compiling)')
+          OUTDATED=$(cargo update --dry-run)
           if [ -n "$OUTDATED" ]; then
             echo "::warning ::The following dependencies are outdated:"
             echo "$OUTDATED"

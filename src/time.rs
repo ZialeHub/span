@@ -432,6 +432,7 @@ pub mod test {
         Ok(())
     }
 
+    // TEST will fail if now time is 23:00:00 and more
     #[test]
     fn is_in_future_last_hour() -> Result<(), SpanError> {
         let mut time = Time::now()?;
@@ -440,6 +441,7 @@ pub mod test {
         Ok(())
     }
 
+    // TEST will fail if now time is 01:00:00 and less
     #[test]
     fn is_in_future_next_hour() -> Result<(), SpanError> {
         let mut time = Time::now()?;

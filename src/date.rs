@@ -249,8 +249,8 @@ impl TryFrom<&Date> for chrono::DateTime<Utc> {
         let date = value.date;
         match Utc::now()
             .with_year(date.year())
-            .and_then(|utc| utc.with_month(date.month()))
             .and_then(|utc| utc.with_day(date.day()))
+            .and_then(|utc| utc.with_month(date.month()))
         {
             Some(utc) => Ok(utc),
             None => Err(SpanError::InvalidUtc).err_ctx(DateError),

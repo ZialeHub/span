@@ -34,7 +34,9 @@ jobs:
           rustc -V
 
       - name: vulnerabilities
-        run: cargo audit
+        run: |
+          cargo install cargo-audit
+          cargo audit
 
       - name: format
         if: always()
@@ -52,7 +54,9 @@ jobs:
 
       - name: outdated dependencies
         if: always()
-        run: cargo outdated --format json
+        run: |
+          cargo install cargo-outdated
+          cargo outdated --format json
 
       - name: unused dependencies (warn)
         if: always()

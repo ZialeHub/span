@@ -3,7 +3,7 @@ name: Rust CI (merge on main)
 on:
   push:
     branches:
-      - 20-enhance-update-to-self-hosted-actions-runners
+      - main
 
 env:
   CARGO_TERM_COLOR: always

@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - 20-enhance-update-to-self-hosted-actions-runners
-    # paths:
-    # - "**.rs"
 jobs:
   ci:
     runs-on:

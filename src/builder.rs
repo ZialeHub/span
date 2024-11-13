@@ -1,4 +1,9 @@
-use crate::{date::BASE_DATE_FORMAT, datetime::BASE_DATETIME_FORMAT, time::BASE_TIME_FORMAT};
+#[cfg(feature = "date")]
+use crate::date::BASE_DATE_FORMAT;
+#[cfg(feature = "datetime")]
+use crate::datetime::BASE_DATETIME_FORMAT;
+#[cfg(feature = "time")]
+use crate::time::BASE_TIME_FORMAT;
 
 /// Builder to set the default date, time, and datetime format
 ///

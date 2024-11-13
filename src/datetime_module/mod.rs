@@ -9,8 +9,10 @@ pub mod datetime {
     use lazy_static::lazy_static;
     use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
-    #[cfg(all(feature = "date", feature = "time"))]
-    use crate::{date::BASE_DATE_FORMAT, time::BASE_TIME_FORMAT};
+    #[cfg(feature = "date")]
+    use crate::date::BASE_DATE_FORMAT;
+    #[cfg(feature = "time")]
+    use crate::time::BASE_TIME_FORMAT;
 
     use crate::error::{DateTimeError, ErrorContext, SpanError};
 
@@ -25,6 +27,10 @@ pub mod datetime {
                 Some(format) => format.to_string(),
                 #[cfg(all(feature = "date", feature = "time"))]
                 None => format!("{} {}", BASE_DATE_FORMAT.get(), BASE_TIME_FORMAT.get()),
+                #[cfg(all(not(feature = "date"), feature = "time"))]
+                None => format!("%Y-%m-%d {}", BASE_TIME_FORMAT.get()),
+                #[cfg(all(feature = "date", not(feature = "time")))]
+                None => format!("{} %H:%M:%S", BASE_DATE_FORMAT.get()),
                 #[cfg(not(all(feature = "date", feature = "time")))]
                 None => "%Y-%m-%d %H:%M:%S".to_string(),
             }

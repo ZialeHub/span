@@ -98,7 +98,7 @@ impl Date {
         self
     }
 
-    /// Function to increase / decrease the date [Date] with [DateUnit]
+    /// Function to increase / decrease the date [Date] by [DateUnit]
     ///
     /// # Example
     /// ```rust,ignore
@@ -147,6 +147,10 @@ impl Date {
     ///
     /// # Example
     /// ```rust,ignore
+    /// let mut date = Date::build("2023-01-31")?;
+    /// date.next(DateUnit::Month)?;
+    /// assert_eq!(date.to_string(), "2023-02-28".to_string());
+    ///
     /// let mut date = Date::build("2023-10-09")?;
     /// date.next(DateUnit::Day)?;
     /// assert_eq!(date.to_string(), "2023-10-10".to_string());
@@ -211,9 +215,9 @@ impl Date {
     /// ```rust,ignore
     /// let rhs = Date::build("2023-10-20")?;
     /// let lhs = Date::build("2023-10-09")?;
-    /// assert_eq!(rhs.unit_in_between(DateUnit::Day, &lhs), Ok(11));
+    /// assert_eq!(rhs.unit_elapsed(DateUnit::Day, &lhs), Ok(11));
     /// ```
-    pub fn unit_in_between(&self, unit: DateUnit, lhs: &Self) -> Result<i64, SpanError> {
+    pub fn unit_elapsed(&self, unit: DateUnit, lhs: &Self) -> Result<i64, SpanError> {
         Ok(match unit {
             DateUnit::Year => self.date.year() as i64 - lhs.date.year() as i64,
             DateUnit::Month => {
@@ -414,6 +418,22 @@ pub mod test {
     }
 
     #[test]
+    fn next_month_january_to_february() -> Result<(), SpanError> {
+        let mut date = Date::build("2023-01-31")?;
+        date.next(DateUnit::Month)?;
+        assert_eq!(date.to_string(), "2023-02-28".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn next_month_february_to_march() -> Result<(), SpanError> {
+        let mut date = Date::build("2023-02-02")?;
+        date.next(DateUnit::Month)?;
+        assert_eq!(date.to_string(), "2023-03-02".to_string());
+        Ok(())
+    }
+
+    #[test]
     fn next_month() -> Result<(), SpanError> {
         let mut date = Date::build("2023-10-09")?;
         date = date.next(DateUnit::Month)?;
@@ -516,12 +536,12 @@ pub mod test {
     }
 
     #[test]
-    fn unit_in_between() -> Result<(), SpanError> {
+    fn unit_elapsed() -> Result<(), SpanError> {
         let date = Date::build("2023-10-09")?;
         let lhs = Date::build("2020-02-08")?;
-        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs)?;
-        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs)?;
-        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs)?;
+        let years_in_between = date.unit_elapsed(DateUnit::Year, &lhs)?;
+        let months_in_between = date.unit_elapsed(DateUnit::Month, &lhs)?;
+        let days_in_between = date.unit_elapsed(DateUnit::Day, &lhs)?;
         assert_eq!(years_in_between, 3);
         assert_eq!(months_in_between, years_in_between * 12 + 8);
         assert_eq!(days_in_between, 1338);
@@ -529,12 +549,12 @@ pub mod test {
     }
 
     #[test]
-    fn unit_in_between_leap_year_days() -> Result<(), SpanError> {
+    fn unit_elapsed_leap_year_days() -> Result<(), SpanError> {
         let date = Date::build("2024-03-12")?;
         let lhs = Date::build("2024-01-12")?;
-        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs)?;
-        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs)?;
-        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs)?;
+        let years_in_between = date.unit_elapsed(DateUnit::Year, &lhs)?;
+        let months_in_between = date.unit_elapsed(DateUnit::Month, &lhs)?;
+        let days_in_between = date.unit_elapsed(DateUnit::Day, &lhs)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 59);
@@ -542,12 +562,12 @@ pub mod test {
     }
 
     #[test]
-    fn unit_in_between_non_leap_year_days() -> Result<(), SpanError> {
+    fn unit_elapsed_non_leap_year_days() -> Result<(), SpanError> {
         let date = Date::build("2023-03-12")?;
         let lhs = Date::build("2023-01-12")?;
-        let years_in_between = date.unit_in_between(DateUnit::Year, &lhs)?;
-        let months_in_between = date.unit_in_between(DateUnit::Month, &lhs)?;
-        let days_in_between = date.unit_in_between(DateUnit::Day, &lhs)?;
+        let years_in_between = date.unit_elapsed(DateUnit::Year, &lhs)?;
+        let months_in_between = date.unit_elapsed(DateUnit::Month, &lhs)?;
+        let days_in_between = date.unit_elapsed(DateUnit::Day, &lhs)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 58);

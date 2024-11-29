@@ -109,7 +109,7 @@ impl Time {
         self
     }
 
-    /// Function to increase / decrease the time [Time] with [TimeUnit]
+    /// Function to increase / decrease the time [Time] by [TimeUnit]
     ///
     /// # Example
     /// ```rust,ignore
@@ -209,11 +209,11 @@ impl Time {
     /// ```rust,ignore
     /// let rhs = Time::build("01:34:45")?;
     /// let lhs = Time::build("00:00:00")?;
-    /// assert_eq!(rhs.unit_in_between(TimeUnit::Hour, &lhs), 1);
-    /// assert_eq!(rhs.unit_in_between(TimeUnit::Minute, &lhs), 94);
-    /// assert_eq!(rhs.unit_in_between(TimeUnit::Second, &lhs), 5685);
+    /// assert_eq!(rhs.unit_elapsed(TimeUnit::Hour, &lhs), 1);
+    /// assert_eq!(rhs.unit_elapsed(TimeUnit::Minute, &lhs), 94);
+    /// assert_eq!(rhs.unit_elapsed(TimeUnit::Second, &lhs), 5685);
     /// ```
-    pub fn unit_in_between(&self, unit: TimeUnit, lhs: &Self) -> i64 {
+    pub fn unit_elapsed(&self, unit: TimeUnit, lhs: &Self) -> i64 {
         match unit {
             TimeUnit::Hour => self.time.signed_duration_since(lhs.time).num_hours(),
             TimeUnit::Minute => self.time.signed_duration_since(lhs.time).num_minutes(),
@@ -482,12 +482,12 @@ pub mod test {
     }
 
     #[test]
-    fn unit_in_between() -> Result<(), SpanError> {
+    fn unit_elapsed() -> Result<(), SpanError> {
         let time = Time::build("01:34:45")?;
         let lhs = Time::build("00:00:00")?;
-        let hours_in_between = time.unit_in_between(TimeUnit::Hour, &lhs);
-        let minutes_in_between = time.unit_in_between(TimeUnit::Minute, &lhs);
-        let seconds_in_between = time.unit_in_between(TimeUnit::Second, &lhs);
+        let hours_in_between = time.unit_elapsed(TimeUnit::Hour, &lhs);
+        let minutes_in_between = time.unit_elapsed(TimeUnit::Minute, &lhs);
+        let seconds_in_between = time.unit_elapsed(TimeUnit::Second, &lhs);
         assert_eq!(hours_in_between, 1);
         assert_eq!(minutes_in_between, hours_in_between * 60 + 34);
         assert_eq!(seconds_in_between, minutes_in_between * 60 + 45);

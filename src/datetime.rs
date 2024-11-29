@@ -111,7 +111,7 @@ impl DateTime {
         self
     }
 
-    /// Function to increase / decrease the datetime [DateTime] with [DateTimeUnit]
+    /// Function to increase / decrease the datetime [DateTime] by [DateTimeUnit]
     ///
     /// # Example
     /// ```rust,ignore
@@ -173,8 +173,11 @@ impl DateTime {
     ///
     /// # Example
     /// ```rust,ignore
-    /// let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
+    /// let mut datetime = DateTime::build("2023-01-31 12:09:27")?;
+    /// datetime.next(DateTimeUnit::Month);
+    /// assert_eq!(datetime.to_string(), "2023-02-28 12:09:27".to_string());
     ///
+    /// let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
     /// datetime.next(DateTimeUnit::Month);
     /// assert_eq!(datetime.to_string(), "2023-11-09 00:00:00".to_string());
     /// ```
@@ -245,12 +248,12 @@ impl DateTime {
     /// ```rust,ignore
     /// let rhs = DateTime::build("2023-10-09 01:01:01")?;
     /// let lhs = DateTime::build("2023-10-08 00:00:00")?;
-    /// let years_in_between = rhs.unit_in_between(DateTimeUnit::Year, &lhs);
-    /// let months_in_between = rhs.unit_in_between(DateTimeUnit::Month, &lhs);
-    /// let days_in_between = rhs.unit_in_between(DateTimeUnit::Day, &lhs);
-    /// let hours_in_between = rhs.unit_in_between(DateTimeUnit::Hour, &lhs);
-    /// let minutes_in_between = rhs.unit_in_between(DateTimeUnit::Minute, &lhs);
-    /// let seconds_in_between = rhs.unit_in_between(DateTimeUnit::Second, &lhs);
+    /// let years_in_between = rhs.unit_elapsed(DateTimeUnit::Year, &lhs);
+    /// let months_in_between = rhs.unit_elapsed(DateTimeUnit::Month, &lhs);
+    /// let days_in_between = rhs.unit_elapsed(DateTimeUnit::Day, &lhs);
+    /// let hours_in_between = rhs.unit_elapsed(DateTimeUnit::Hour, &lhs);
+    /// let minutes_in_between = rhs.unit_elapsed(DateTimeUnit::Minute, &lhs);
+    /// let seconds_in_between = rhs.unit_elapsed(DateTimeUnit::Second, &lhs);
     /// assert_eq!(years_in_between, 0);
     /// assert_eq!(months_in_between, 0);
     /// assert_eq!(days_in_between, 1);
@@ -258,7 +261,7 @@ impl DateTime {
     /// assert_eq!(minutes_in_between, hours_in_between * 60 + 1);
     /// assert_eq!(seconds_in_between, minutes_in_between * 60 + 1);
     /// ```
-    pub fn unit_in_between(&self, unit: DateTimeUnit, lhs: &Self) -> i32 {
+    pub fn unit_elapsed(&self, unit: DateTimeUnit, lhs: &Self) -> i32 {
         match unit {
             DateTimeUnit::Year => self.datetime.year() - lhs.datetime.year(),
             DateTimeUnit::Month => {
@@ -579,6 +582,22 @@ pub mod test {
     }
 
     #[test]
+    fn next_month_january_to_february() -> Result<(), SpanError> {
+        let mut datetime = DateTime::build("2023-01-31 12:09:27")?;
+        datetime.next(DateTimeUnit::Month)?;
+        assert_eq!(datetime.to_string(), "2023-02-28 12:09:27".to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn next_month_february_to_march() -> Result<(), SpanError> {
+        let mut datetime = DateTime::build("2023-02-28 12:09:27")?;
+        datetime.next(DateTimeUnit::Month)?;
+        assert_eq!(datetime.to_string(), "2023-03-28 12:09:27".to_string());
+        Ok(())
+    }
+
+    #[test]
     fn next_month() -> Result<(), SpanError> {
         let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
         datetime = datetime.next(DateTimeUnit::Month)?;
@@ -696,15 +715,15 @@ pub mod test {
     }
 
     #[test]
-    fn unit_in_between() -> Result<(), SpanError> {
+    fn unit_elapsed() -> Result<(), SpanError> {
         let datetime = DateTime::build("2023-10-09 01:01:01")?;
         let lhs = DateTime::build("2023-10-08 00:00:00")?;
-        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs);
-        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs);
-        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs);
-        let hours_in_between = datetime.unit_in_between(DateTimeUnit::Hour, &lhs);
-        let minutes_in_between = datetime.unit_in_between(DateTimeUnit::Minute, &lhs);
-        let seconds_in_between = datetime.unit_in_between(DateTimeUnit::Second, &lhs);
+        let years_in_between = datetime.unit_elapsed(DateTimeUnit::Year, &lhs);
+        let months_in_between = datetime.unit_elapsed(DateTimeUnit::Month, &lhs);
+        let days_in_between = datetime.unit_elapsed(DateTimeUnit::Day, &lhs);
+        let hours_in_between = datetime.unit_elapsed(DateTimeUnit::Hour, &lhs);
+        let minutes_in_between = datetime.unit_elapsed(DateTimeUnit::Minute, &lhs);
+        let seconds_in_between = datetime.unit_elapsed(DateTimeUnit::Second, &lhs);
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, 0);
         assert_eq!(days_in_between, 1);
@@ -715,12 +734,12 @@ pub mod test {
     }
 
     #[test]
-    fn unit_in_between_leap_year_days() -> Result<(), SpanError> {
+    fn unit_elapsed_leap_year_days() -> Result<(), SpanError> {
         let datetime = DateTime::build("2024-03-12 00:00:00")?;
         let lhs = DateTime::build("2024-01-12 00:00:00")?;
-        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs);
-        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs);
-        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs);
+        let years_in_between = datetime.unit_elapsed(DateTimeUnit::Year, &lhs);
+        let months_in_between = datetime.unit_elapsed(DateTimeUnit::Month, &lhs);
+        let days_in_between = datetime.unit_elapsed(DateTimeUnit::Day, &lhs);
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 60);
@@ -728,12 +747,12 @@ pub mod test {
     }
 
     #[test]
-    fn unit_in_between_non_leap_year_days() -> Result<(), SpanError> {
+    fn unit_elapsed_non_leap_year_days() -> Result<(), SpanError> {
         let datetime = DateTime::build("2023-03-12 00:00:00")?;
         let lhs = DateTime::build("2023-01-12 00:00:00")?;
-        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs);
-        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs);
-        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs);
+        let years_in_between = datetime.unit_elapsed(DateTimeUnit::Year, &lhs);
+        let months_in_between = datetime.unit_elapsed(DateTimeUnit::Month, &lhs);
+        let days_in_between = datetime.unit_elapsed(DateTimeUnit::Day, &lhs);
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 59);

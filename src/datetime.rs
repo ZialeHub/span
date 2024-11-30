@@ -117,10 +117,10 @@ impl DateTime {
     /// ```rust,ignore
     /// let mut datetime = DateTime::build("2023-10-09 00:00:00")?;
     ///
-    /// datetime.update(DateTimeUnit::Year, 1);
+    /// datetime.update(DateTimeUnit::Year, 1)?;
     /// assert_eq!(datetime.to_string(), "2024-10-09 00:00:00".to_string());
     ///
-    /// datetime.update(DateTimeUnit::Minute, 5);
+    /// datetime.update(DateTimeUnit::Minute, 5)?;
     /// assert_eq!(datetime.to_string(), "2024-10-09 00:05:00".to_string());
     /// ```
     ///

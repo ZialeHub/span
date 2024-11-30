@@ -30,3 +30,35 @@ By default _span_ can be used to manage `time`, `date` or `datetime`, but you're
 - `["time"]`
 - `["date"]`
 - `["datetime"]`
+
+# Examples
+
+```rust
+let _span = crate::builder::SpanBuilder::builder()
+    .date_format("%d %m %Y")
+    .time_format("T%H:%M:%SZ.000")
+    .datetime_format("%Y-%m-%d %H:%M:%S")
+    .build();
+
+let mut datetime = DateTime::build("2024-10-31 06:32:28")?;
+
+datetime.update(DateTimeUnit::Month, 1)?;
+assert_eq!(datetime.to_string(), "2024-11-30 06:32:28");
+
+assert!(datetime.matches(DateTimeUnit::Year, 2024));
+assert!(datetime.matches(DateTimeUnit::Hour, 6));
+assert!(datetime.matches(DateTimeUnit::Day, 30));
+
+let previous_datetime = DateTime::build("2022-01-22 06:32:28")?;
+let elapsed = datetime.elapsed(&previous_datetime);
+assert_eq!(elapsed, TimeDelta::try_days(1043).unwrap());
+
+let year_elapsed = datetime.unit_elapsed(DateTimeUnit::Year, &previous_datetime);
+assert_eq!(year_elapsed, 2);
+
+let is_in_future = previous_datetime.is_in_future()?;
+assert!(!is_in_future);
+
+eprintln!("DateTime == '{}'", datetime);
+// "DateTime == '2024-11-30 06:32:28'"
+```

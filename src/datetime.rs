@@ -5,6 +5,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     error::{DateTimeError, ErrorContext, SpanError},
+    span::Span,
     BASE_DATETIME_FORMAT,
 };
 
@@ -73,6 +74,32 @@ impl DerefMut for DateTime {
 }
 
 impl DateTime {
+    /// Getter for the datetime
+    pub fn datetime(&self) -> NaiveDateTime {
+        self.datetime
+    }
+
+    /// Return the timestamp from the [DateTime]
+    pub fn timestamp(&self) -> i64 {
+        self.datetime.and_utc().timestamp()
+    }
+
+    /// Clear the time from the [DateTime]
+    pub fn clear_time(&self) -> Result<Self, SpanError> {
+        let datetime = self
+            .datetime
+            .with_hour(0)
+            .and_then(|datetime| datetime.with_minute(0))
+            .and_then(|datetime| datetime.with_second(0))
+            .ok_or(SpanError::ClearTime(
+                "Error while setting start of day".to_string(),
+            ))
+            .err_ctx(DateTimeError)?;
+        DateTime::try_from(datetime)
+    }
+}
+
+impl Span<DateTimeUnit> for DateTime {
     /// Create a new variable [DateTime] from the parameters `datetime` and `format`
     ///
     ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
@@ -86,7 +113,7 @@ impl DateTime {
     /// # Errors
     ///
     /// Return an Err(_) if `datetime` is not formated with `format`
-    pub fn new(datetime: impl ToString, format: impl ToString) -> Result<Self, SpanError> {
+    fn new(datetime: impl ToString, format: impl ToString) -> Result<Self, SpanError> {
         let datetime =
             match NaiveDateTime::parse_from_str(&datetime.to_string(), &format.to_string()) {
                 Ok(datetime) => datetime,
@@ -109,7 +136,7 @@ impl DateTime {
     /// # Errors
     ///
     /// Return an Err(_) if the given `datetime` is not formated with [BASE_DATETIME_FORMAT](static@BASE_DATETIME_FORMAT)
-    pub fn build(datetime: impl ToString) -> Result<Self, SpanError> {
+    fn build(datetime: impl ToString) -> Result<Self, SpanError> {
         let datetime =
             match NaiveDateTime::parse_from_str(&datetime.to_string(), &BASE_DATETIME_FORMAT.get())
             {
@@ -122,19 +149,14 @@ impl DateTime {
         })
     }
 
-    /// Getter for the datetime
-    pub fn datetime(&self) -> NaiveDateTime {
-        self.datetime
-    }
-
     /// Setter for the format
-    pub fn format(mut self, format: &str) -> Self {
+    fn format(mut self, format: impl ToString) -> Self {
         self.format = format.to_string();
         self
     }
 
     /// Function to increase / decrease the datetime [DateTime] with [DateTimeUnit]
-    pub fn update(&mut self, unit: DateTimeUnit, value: i32) -> Result<(), SpanError> {
+    fn update(&mut self, unit: DateTimeUnit, value: i32) -> Result<(), SpanError> {
         let datetime = match unit {
             DateTimeUnit::Year if value > 0 => self
                 .datetime
@@ -178,12 +200,12 @@ impl DateTime {
     }
 
     /// Go to the next [DateTimeUnit] from [DateTime]
-    pub fn next(&mut self, unit: DateTimeUnit) -> Result<(), SpanError> {
+    fn next(&mut self, unit: DateTimeUnit) -> Result<(), SpanError> {
         self.update(unit, 1)
     }
 
     /// Compare the [DateTimeUnit] from [DateTime] and value ([u32])
-    pub fn matches(&self, unit: DateTimeUnit, value: u32) -> bool {
+    fn matches(&self, unit: DateTimeUnit, value: u32) -> bool {
         match unit {
             DateTimeUnit::Year => self.datetime.year() == value as i32,
             DateTimeUnit::Month => self.datetime.month() == value,
@@ -195,72 +217,46 @@ impl DateTime {
     }
 
     /// Return the current [DateTime] from the system
-    pub fn now() -> Result<Self, SpanError> {
+    fn now() -> Result<Self, SpanError> {
         Self::build(Local::now().format(&BASE_DATETIME_FORMAT.get()))
     }
 
     /// Return a [bool] to know if the [DateTime] is in the future
-    pub fn is_in_future(&self) -> Result<bool, SpanError> {
+    fn is_in_future(&self) -> Result<bool, SpanError> {
         let now = Self::build(Local::now().format(&BASE_DATETIME_FORMAT.get()))?;
         Ok(self.datetime > now.datetime)
     }
 
     /// Elapsed [Duration] between two [DateTime]
-    pub fn elapsed(&self, lhs: &Self) -> Duration {
+    fn elapsed(&self, lhs: &Self) -> Duration {
         self.datetime.signed_duration_since(lhs.datetime)
     }
 
     /// Number of [DateTimeUnit] between two [DateTime]
-    pub fn unit_in_between(&self, unit: DateTimeUnit, lhs: &Self) -> i32 {
-        match unit {
-            DateTimeUnit::Year => self.datetime.year() - lhs.datetime.year(),
+    fn unit_in_between(&self, unit: DateTimeUnit, lhs: &Self) -> Result<i64, SpanError> {
+        Ok(match unit {
+            DateTimeUnit::Year => (self.datetime.year() - lhs.datetime.year()) as i64,
             DateTimeUnit::Month => {
-                self.datetime.year() * 12 + self.datetime.month() as i32
-                    - (lhs.datetime.year() * 12 + lhs.datetime.month() as i32)
+                self.datetime.year() as i64 * 12 + self.datetime.month() as i64
+                    - (lhs.datetime.year() as i64 * 12 + lhs.datetime.month() as i64)
             }
             DateTimeUnit::Day => {
-                (self.datetime.and_utc().timestamp() as i32
-                    - lhs.datetime.and_utc().timestamp() as i32)
+                (self.datetime.and_utc().timestamp() - lhs.datetime.and_utc().timestamp())
                     / 60
                     / 60
                     / 24
             }
             DateTimeUnit::Hour => {
-                (self.datetime.and_utc().timestamp() as i32
-                    - lhs.datetime.and_utc().timestamp() as i32)
-                    / 60
-                    / 60
+                (self.datetime.and_utc().timestamp() - lhs.datetime.and_utc().timestamp()) / 60 / 60
             }
             DateTimeUnit::Minute => {
-                (self.datetime.and_utc().timestamp() as i32
-                    - lhs.datetime.and_utc().timestamp() as i32)
-                    / 60
+                (self.datetime.and_utc().timestamp() - lhs.datetime.and_utc().timestamp()) / 60
             }
             DateTimeUnit::Second => {
-                self.datetime.and_utc().timestamp() as i32
-                    - lhs.datetime.and_utc().timestamp() as i32
+                self.datetime.and_utc().timestamp() - lhs.datetime.and_utc().timestamp()
             }
         }
-        .abs()
-    }
-
-    /// Return the timestamp from the [DateTime]
-    pub fn timestamp(&self) -> i64 {
-        self.datetime.and_utc().timestamp()
-    }
-
-    /// Clear the time from the [DateTime]
-    pub fn clear_time(&self) -> Result<Self, SpanError> {
-        let datetime = self
-            .datetime
-            .with_hour(0)
-            .and_then(|datetime| datetime.with_minute(0))
-            .and_then(|datetime| datetime.with_second(0))
-            .ok_or(SpanError::ClearTime(
-                "Error while setting start of day".to_string(),
-            ))
-            .err_ctx(DateTimeError)?;
-        DateTime::try_from(datetime)
+        .abs())
     }
 }
 
@@ -648,12 +644,12 @@ pub mod test {
     fn unit_in_between() -> Result<(), SpanError> {
         let datetime = DateTime::build("2023-10-09 01:01:01")?;
         let lhs = DateTime::build("2023-10-08 00:00:00")?;
-        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs);
-        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs);
-        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs);
-        let hours_in_between = datetime.unit_in_between(DateTimeUnit::Hour, &lhs);
-        let minutes_in_between = datetime.unit_in_between(DateTimeUnit::Minute, &lhs);
-        let seconds_in_between = datetime.unit_in_between(DateTimeUnit::Second, &lhs);
+        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs)?;
+        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs)?;
+        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs)?;
+        let hours_in_between = datetime.unit_in_between(DateTimeUnit::Hour, &lhs)?;
+        let minutes_in_between = datetime.unit_in_between(DateTimeUnit::Minute, &lhs)?;
+        let seconds_in_between = datetime.unit_in_between(DateTimeUnit::Second, &lhs)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, 0);
         assert_eq!(days_in_between, 1);
@@ -667,9 +663,9 @@ pub mod test {
     fn unit_in_between_leap_year_days() -> Result<(), SpanError> {
         let datetime = DateTime::build("2024-03-12 00:00:00")?;
         let lhs = DateTime::build("2024-01-12 00:00:00")?;
-        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs);
-        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs);
-        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs);
+        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs)?;
+        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs)?;
+        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 60);
@@ -680,9 +676,9 @@ pub mod test {
     fn unit_in_between_non_leap_year_days() -> Result<(), SpanError> {
         let datetime = DateTime::build("2023-03-12 00:00:00")?;
         let lhs = DateTime::build("2023-01-12 00:00:00")?;
-        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs);
-        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs);
-        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs);
+        let years_in_between = datetime.unit_in_between(DateTimeUnit::Year, &lhs)?;
+        let months_in_between = datetime.unit_in_between(DateTimeUnit::Month, &lhs)?;
+        let days_in_between = datetime.unit_in_between(DateTimeUnit::Day, &lhs)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 59);

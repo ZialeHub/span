@@ -5,6 +5,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     error::{ErrorContext, SpanError, TimeError},
+    span::Span,
     BASE_TIME_FORMAT,
 };
 
@@ -69,6 +70,29 @@ impl Default for Time {
 }
 
 impl Time {
+    /// Getter for the time
+    pub fn time(&self) -> NaiveTime {
+        self.time
+    }
+
+    /// Return midnight [Time]
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// assert_eq!(Time::build("00:00:00"), Time::midnight())
+    /// assert_eq!(Time::build("00:00:00"), Time::default())
+    /// ```
+    pub fn midnight() -> Self {
+        let time = NaiveTime::from_hms_opt(0, 0, 0).expect("Error Time midnight");
+        Self {
+            time,
+            format: BASE_TIME_FORMAT.get().to_string(),
+        }
+    }
+}
+
+impl Span<TimeUnit> for Time {
     /// Create a new variable [Time] from the parameters `time` and `format`
     ///
     ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
@@ -84,7 +108,7 @@ impl Time {
     /// # Errors
     ///
     /// Return an Err(_) if `time` is not formated with `format`
-    pub fn new(time: impl ToString, format: impl ToString) -> Result<Self, SpanError> {
+    fn new(time: impl ToString, format: impl ToString) -> Result<Self, SpanError> {
         let time = match NaiveTime::parse_from_str(&time.to_string(), &format.to_string()) {
             Ok(time) => time,
             Err(e) => return Err(SpanError::ParseFromStr(e)).err_ctx(TimeError),
@@ -109,23 +133,18 @@ impl Time {
     /// # Errors
     ///
     /// Return an Err(_) if the given `time` is not formated with [BASE_TIME_FORMAT](static@BASE_TIME_FORMAT)
-    pub fn build(time: impl ToString) -> Result<Self, SpanError> {
+    fn build(time: impl ToString) -> Result<Self, SpanError> {
         Self::new(time, BASE_TIME_FORMAT.get())
     }
 
-    /// Getter for the time
-    pub fn time(&self) -> NaiveTime {
-        self.time
-    }
-
     /// Setter for the format
-    pub fn format(mut self, format: impl ToString) -> Self {
+    fn format(mut self, format: impl ToString) -> Self {
         self.format = format.to_string();
         self
     }
 
     /// Function to increase / decrease the time [Time] with [TimeUnit]
-    pub fn update(&mut self, unit: TimeUnit, value: i32) -> Result<(), SpanError> {
+    fn update(&mut self, unit: TimeUnit, value: i32) -> Result<(), SpanError> {
         let delta_time = match unit {
             TimeUnit::Hour => TimeDelta::new(value as i64 * 60 * 60, 0),
             TimeUnit::Minute => TimeDelta::new(value as i64 * 60, 0),
@@ -145,12 +164,12 @@ impl Time {
     }
 
     /// Go to the next [TimeUnit] from [Time]
-    pub fn next(&mut self, unit: TimeUnit) -> Result<(), SpanError> {
+    fn next(&mut self, unit: TimeUnit) -> Result<(), SpanError> {
         self.update(unit, 1)
     }
 
     /// Compare the [TimeUnit] from [Time] and value ([u32])
-    pub fn matches(&self, unit: TimeUnit, value: u32) -> bool {
+    fn matches(&self, unit: TimeUnit, value: u32) -> bool {
         match unit {
             TimeUnit::Hour => self.time.hour() == value,
             TimeUnit::Minute => self.time.minute() == value,
@@ -159,38 +178,27 @@ impl Time {
     }
 
     /// Return the current [Time] from the system
-    pub fn now() -> Result<Self, SpanError> {
+    fn now() -> Result<Self, SpanError> {
         Self::build(Local::now().format(BASE_TIME_FORMAT.get()))
     }
 
-    /// Return midnight [Time]
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// assert_eq!(Time::build("00:00:00"), Time::midnight())
-    /// assert_eq!(Time::build("00:00:00"), Time::default())
-    /// ```
-    pub fn midnight() -> Self {
-        let time = NaiveTime::from_hms_opt(0, 0, 0).expect("Error Time midnight");
-        Self {
-            time,
-            format: BASE_TIME_FORMAT.get().to_string(),
-        }
-    }
-
     /// Elapsed [TimeDelta] between two [Time]
-    pub fn elapsed(&self, lhs: &Self) -> TimeDelta {
+    fn elapsed(&self, lhs: &Self) -> TimeDelta {
         self.time.signed_duration_since(lhs.time)
     }
 
     /// Number of [TimeUnit] between two [Time]
-    pub fn unit_in_between(&self, unit: TimeUnit, lhs: &Self) -> i64 {
-        match unit {
+    fn unit_in_between(&self, unit: TimeUnit, lhs: &Self) -> Result<i64, SpanError> {
+        Ok(match unit {
             TimeUnit::Hour => self.time.signed_duration_since(lhs.time).num_hours(),
             TimeUnit::Minute => self.time.signed_duration_since(lhs.time).num_minutes(),
             TimeUnit::Second => self.time.signed_duration_since(lhs.time).num_seconds(),
-        }
+        })
+    }
+
+    fn is_in_future(&self) -> Result<bool, SpanError> {
+        let now = Self::now()?;
+        Ok(self.time > now.time)
     }
 }
 
@@ -463,9 +471,9 @@ pub mod test {
     fn unit_in_between() -> Result<(), SpanError> {
         let time = Time::build("01:34:45")?;
         let lhs = Time::build("00:00:00")?;
-        let hours_in_between = time.unit_in_between(TimeUnit::Hour, &lhs);
-        let minutes_in_between = time.unit_in_between(TimeUnit::Minute, &lhs);
-        let seconds_in_between = time.unit_in_between(TimeUnit::Second, &lhs);
+        let hours_in_between = time.unit_in_between(TimeUnit::Hour, &lhs)?;
+        let minutes_in_between = time.unit_in_between(TimeUnit::Minute, &lhs)?;
+        let seconds_in_between = time.unit_in_between(TimeUnit::Second, &lhs)?;
         assert_eq!(hours_in_between, 1);
         assert_eq!(minutes_in_between, hours_in_between * 60 + 34);
         assert_eq!(seconds_in_between, minutes_in_between * 60 + 45);

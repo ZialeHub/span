@@ -5,6 +5,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     error::{DateError, ErrorContext, SpanError},
+    span::Span,
     BASE_DATE_FORMAT,
 };
 
@@ -63,6 +64,13 @@ impl DerefMut for Date {
 }
 
 impl Date {
+    /// Getter for the inner date
+    pub fn date(&self) -> NaiveDate {
+        self.date
+    }
+}
+
+impl Span<DateUnit> for Date {
     /// Create a new variable [Date] from the parameters `date` and `format`
     ///
     ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
@@ -76,7 +84,7 @@ impl Date {
     /// # Errors
     ///
     /// Return an Err(_) if `time` is not formated with `format`
-    pub fn new(date: impl ToString, format: impl ToString) -> Result<Self, SpanError> {
+    fn new(date: impl ToString, format: impl ToString) -> Result<Self, SpanError> {
         let date = match NaiveDate::parse_from_str(&date.to_string(), &format.to_string()) {
             Ok(date) => date,
             Err(e) => return Err(SpanError::ParseFromStr(e)).err_ctx(DateError),
@@ -98,23 +106,18 @@ impl Date {
     /// # Errors
     ///
     /// Return an Err(_) if the given `date` is not formated with [BASE_DATE_FORMAT](static@BASE_DATE_FORMAT)
-    pub fn build(date: impl ToString) -> Result<Self, SpanError> {
+    fn build(date: impl ToString) -> Result<Self, SpanError> {
         Self::new(date, BASE_DATE_FORMAT.get())
     }
 
-    /// Getter for the date
-    pub fn date(&self) -> NaiveDate {
-        self.date
-    }
-
     /// Setter for the format
-    pub fn format(mut self, format: impl ToString) -> Self {
+    fn format(mut self, format: impl ToString) -> Self {
         self.format = format.to_string();
         self
     }
 
     /// Function to increase / decrease the date [Date] with [DateUnit]
-    pub fn update(&mut self, unit: DateUnit, value: i32) -> Result<(), SpanError> {
+    fn update(&mut self, unit: DateUnit, value: i32) -> Result<(), SpanError> {
         let date = match unit {
             DateUnit::Year if value > 0 => {
                 self.date.checked_add_months(Months::new(value as u32 * 12))
@@ -145,36 +148,36 @@ impl Date {
     }
 
     /// Go to the next [DateUnit] from [Date]
-    pub fn next(&mut self, unit: DateUnit) -> Result<(), SpanError> {
+    fn next(&mut self, unit: DateUnit) -> Result<(), SpanError> {
         self.update(unit, 1)
     }
 
     /// Compare the [DateUnit] from [Date] and value ([i32])
-    pub fn matches(&self, unit: DateUnit, value: i32) -> bool {
+    fn matches(&self, unit: DateUnit, value: u32) -> bool {
         match unit {
-            DateUnit::Year => self.date.year() == value,
-            DateUnit::Month => self.date.month() == value as u32,
-            DateUnit::Day => self.date.day() == value as u32,
+            DateUnit::Year => self.date.year() == value as i32,
+            DateUnit::Month => self.date.month() == value,
+            DateUnit::Day => self.date.day() == value,
         }
     }
 
     /// Return the current [Date] from the system
-    pub fn today() -> Result<Self, SpanError> {
+    fn now() -> Result<Self, SpanError> {
         Self::build(Local::now().format(BASE_DATE_FORMAT.get()))
     }
 
     /// Return a [bool] to know if the [Date] is in the future
-    pub fn is_in_future(&self) -> Result<bool, SpanError> {
-        Ok(self.date > Self::today()?.date)
+    fn is_in_future(&self) -> Result<bool, SpanError> {
+        Ok(self.date > Self::now()?.date)
     }
 
     /// Elapsed [Duration] between two [Date]
-    pub fn elapsed(&self, lhs: &Self) -> Duration {
+    fn elapsed(&self, lhs: &Self) -> Duration {
         self.date.signed_duration_since(lhs.date)
     }
 
     /// Number of [DateUnit] between two [Date]
-    pub fn unit_in_between(&self, unit: DateUnit, lhs: &Self) -> Result<i64, SpanError> {
+    fn unit_in_between(&self, unit: DateUnit, lhs: &Self) -> Result<i64, SpanError> {
         Ok(match unit {
             DateUnit::Year => self.date.year() as i64 - lhs.date.year() as i64,
             DateUnit::Month => {
@@ -431,7 +434,7 @@ pub mod test {
 
     #[test]
     fn is_in_future_yesterday() -> Result<(), SpanError> {
-        let mut date = Date::today()?;
+        let mut date = Date::now()?;
         date.update(DateUnit::Day, -1)?;
         assert!(!date.is_in_future()?);
         Ok(())
@@ -439,7 +442,7 @@ pub mod test {
 
     #[test]
     fn is_in_future_tomorrow() -> Result<(), SpanError> {
-        let mut date = Date::today()?;
+        let mut date = Date::now()?;
         date.update(DateUnit::Day, 1)?;
         assert!(date.is_in_future()?);
         Ok(())
@@ -447,7 +450,7 @@ pub mod test {
 
     #[test]
     fn is_in_future_now() -> Result<(), SpanError> {
-        let date = Date::today()?;
+        let date = Date::now()?;
         assert!(!date.is_in_future()?);
         Ok(())
     }

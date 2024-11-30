@@ -1,0 +1,25 @@
+use chrono::Duration;
+
+use crate::error::SpanError;
+
+/// U is the Unit of the span
+pub trait Span<U>
+where
+    Self: Sized,
+{
+    fn new(data: impl ToString, format: impl ToString) -> Result<Self, SpanError>;
+    fn build(data: impl ToString) -> Result<Self, SpanError>;
+    /// Setterfor the format of the span
+    fn format(self, format: impl ToString) -> Self;
+    /// Update the value of the span by a given Unit (U) and value.
+    fn update(&mut self, unit: U, value: i32) -> Result<(), SpanError>;
+    /// Get the value of the span incremented by a given Unit (U).
+    fn next(&mut self, unit: U) -> Result<(), SpanError>;
+    /// Return if the span matches the given unit and value.
+    fn matches(&self, unit: U, value: u32) -> bool;
+    /// Return the value of the span at system time.
+    fn now() -> Result<Self, SpanError>;
+    fn is_in_future(&self) -> Result<bool, SpanError>;
+    fn elapsed(&self, lhs: &Self) -> Duration;
+    fn unit_in_between(&self, unit: U, lhs: &Self) -> Result<i64, SpanError>;
+}

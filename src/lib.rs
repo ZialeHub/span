@@ -12,6 +12,7 @@ pub mod date;
 pub mod datetime;
 pub mod error;
 pub mod prelude;
+pub mod span;
 pub mod time;
 
 lazy_static! {

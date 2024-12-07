@@ -102,12 +102,26 @@ impl Time {
     }
 
     /// Setter for the format
+    ///
+    ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
     pub fn format(mut self, format: impl ToString) -> Self {
         self.format = format.to_string();
         self
     }
 
-    /// Function to increase / decrease the time [Time] with [TimeUnit]
+    /// Function to increase / decrease the time [Time] by [TimeUnit]
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let mut time = Time::build("00:00:00")?;
+    /// time.update(TimeUnit::Hour, 1);
+    /// time.update(TimeUnit::Minute, 4);
+    /// time.update(TimeUnit::Second, 30);
+    /// assert_eq!(time.to_string(), "01:04:30".to_string());
+    /// ```
+    ///
+    /// # Errors
+    /// Return an Err(_) if the operation is not possible
     pub fn update(&self, unit: TimeUnit, value: i32) -> Result<Self, SpanError> {
         let delta_time = match unit {
             TimeUnit::Hour => TimeDelta::new(value as i64 * 60 * 60, 0),
@@ -128,11 +142,26 @@ impl Time {
     }
 
     /// Go to the next [TimeUnit] from [Time]
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let mut time = Time::build("00:00:00")?;
+    /// time.next(TimeUnit::Hour);
+    /// assert_eq!(time.to_string(), "01:00:00".to_string());
+    /// ```
     pub fn next(&self, unit: TimeUnit) -> Result<Self, SpanError> {
         self.update(unit, 1)
     }
 
     /// Compare the [TimeUnit] from [Time] and value ([u32])
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let time = Time::build("06:32:05")?;
+    /// assert!(time.matches(TimeUnit::Hour, 6));
+    /// assert!(time.matches(TimeUnit::Minute, 32));
+    /// assert!(time.matches(TimeUnit::Second, 5));
+    /// ```
     pub fn matches(&self, unit: TimeUnit, value: u32) -> bool {
         match unit {
             TimeUnit::Hour => self.time.hour() == value,
@@ -163,16 +192,32 @@ impl Time {
     }
 
     /// Elapsed [TimeDelta] between two [Time]
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let rhs = Time::build("00:03:00")?;
+    /// let lhs = Time::build("00:00:00")?;
+    /// assert_eq!(rhs.elapsed(&lhs), TimeDelta::try_minutes(3).unwrap());
+    /// ```
     pub fn elapsed(&self, lhs: &Self) -> TimeDelta {
         self.time.signed_duration_since(lhs.time)
     }
 
     /// Number of [TimeUnit] between two [Time]
-    pub fn unit_in_between(&self, unit: TimeUnit, lhs: &Self) -> i64 {
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let lhs = Time::build("01:34:45")?;
+    /// let rhs = Time::build("00:00:00")?;
+    /// assert_eq!(lhs.unit_elapsed(&rhs, TimeUnit::Hour), 1);
+    /// assert_eq!(lhs.unit_elapsed(&rhs, TimeUnit::Minute), 94);
+    /// assert_eq!(lhs.unit_elapsed(&rhs, TimeUnit::Second), 5685);
+    /// ```
+    pub fn unit_elapsed(&self, rhs: &Self, unit: TimeUnit) -> i64 {
         match unit {
-            TimeUnit::Hour => self.time.signed_duration_since(lhs.time).num_hours(),
-            TimeUnit::Minute => self.time.signed_duration_since(lhs.time).num_minutes(),
-            TimeUnit::Second => self.time.signed_duration_since(lhs.time).num_seconds(),
+            TimeUnit::Hour => self.time.signed_duration_since(rhs.time).num_hours(),
+            TimeUnit::Minute => self.time.signed_duration_since(rhs.time).num_minutes(),
+            TimeUnit::Second => self.time.signed_duration_since(rhs.time).num_seconds(),
         }
     }
 }
@@ -437,12 +482,12 @@ pub mod test {
     }
 
     #[test]
-    fn unit_in_between() -> Result<(), SpanError> {
+    fn unit_elapsed() -> Result<(), SpanError> {
         let time = Time::build("01:34:45")?;
-        let lhs = Time::build("00:00:00")?;
-        let hours_in_between = time.unit_in_between(TimeUnit::Hour, &lhs);
-        let minutes_in_between = time.unit_in_between(TimeUnit::Minute, &lhs);
-        let seconds_in_between = time.unit_in_between(TimeUnit::Second, &lhs);
+        let rhs = Time::build("00:00:00")?;
+        let hours_in_between = time.unit_elapsed(&rhs, TimeUnit::Hour);
+        let minutes_in_between = time.unit_elapsed(&rhs, TimeUnit::Minute);
+        let seconds_in_between = time.unit_elapsed(&rhs, TimeUnit::Second);
         assert_eq!(hours_in_between, 1);
         assert_eq!(minutes_in_between, hours_in_between * 60 + 34);
         assert_eq!(seconds_in_between, minutes_in_between * 60 + 45);

@@ -243,7 +243,10 @@ impl DateTime {
 impl TryFrom<NaiveDateTime> for DateTime {
     type Error = SpanError;
     fn try_from(datetime: NaiveDateTime) -> Result<Self, Self::Error> {
-        Self::build(datetime)
+        Self::new(
+            datetime.format(&BASE_DATETIME_FORMAT.get()),
+            BASE_DATETIME_FORMAT.get(),
+        )
     }
 }
 
@@ -259,7 +262,10 @@ impl TryFrom<i32> for DateTime {
                 .err_ctx(DateTimeError);
             }
         };
-        Self::build(datetime)
+        Self::new(
+            datetime.format(&BASE_DATETIME_FORMAT.get()),
+            BASE_DATETIME_FORMAT.get(),
+        )
     }
 }
 
@@ -275,7 +281,10 @@ impl TryFrom<i64> for DateTime {
                 .err_ctx(DateTimeError);
             }
         };
-        Self::build(datetime)
+        Self::new(
+            datetime.format(&BASE_DATETIME_FORMAT.get()),
+            BASE_DATETIME_FORMAT.get(),
+        )
     }
 }
 

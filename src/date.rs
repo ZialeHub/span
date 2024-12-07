@@ -420,7 +420,7 @@ pub mod test {
     #[test]
     fn next_month_january_to_february() -> Result<(), SpanError> {
         let mut date = Date::build("2023-01-31")?;
-        date.next(DateUnit::Month)?;
+        date = date.next(DateUnit::Month)?;
         assert_eq!(date.to_string(), "2023-02-28".to_string());
         Ok(())
     }
@@ -428,7 +428,7 @@ pub mod test {
     #[test]
     fn next_month_february_to_march() -> Result<(), SpanError> {
         let mut date = Date::build("2023-02-02")?;
-        date.next(DateUnit::Month)?;
+        date = date.next(DateUnit::Month)?;
         assert_eq!(date.to_string(), "2023-03-02".to_string());
         Ok(())
     }

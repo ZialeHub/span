@@ -191,6 +191,40 @@ impl Span<DateUnit> for Date {
             }
         })
     }
+
+    /// Clear the [DateUnit] from the [Date]
+    ///
+    /// # Errors
+    /// Return an Err(_) if the [DateUnit] cannot be cleared
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let date = Date::build("2023-10-09")?;
+    /// let year = date.clear_unit(DateUnit::Year)?;
+    /// assert_eq!(year.to_string(), "1970-10-09".to_string());
+    /// let month = date.clear_unit(DateUnit::Month)?;
+    /// assert_eq!(month.to_string(), "2023-01-09".to_string());
+    /// let day = date.clear_unit(DateUnit::Day)?;
+    /// assert_eq!(day.to_string(), "2023-10-01".to_string());
+    /// ```
+    fn clear_unit(&self, unit: DateUnit) -> Result<Self, SpanError> {
+        let date = match unit {
+            DateUnit::Year => self.date.with_year(1970).ok_or(SpanError::ClearUnit(
+                "Error while setting year to 1970".to_string(),
+            )),
+            DateUnit::Month => self.date.with_month(1).ok_or(SpanError::ClearUnit(
+                "Error while setting month to 1".to_string(),
+            )),
+            DateUnit::Day => self.date.with_day(1).ok_or(SpanError::ClearUnit(
+                "Error while setting day to 1".to_string(),
+            )),
+        }
+        .err_ctx(DateError)?;
+        Ok(Self {
+            date,
+            format: self.format.clone(),
+        })
+    }
 }
 
 impl From<NaiveDateTime> for Date {

@@ -200,6 +200,40 @@ impl Span<TimeUnit> for Time {
         let now = Self::now()?;
         Ok(self.time > now.time)
     }
+
+    /// Clear the [TimeUnit] from [Time]
+    ///
+    /// # Errors
+    /// Return an Err(_) if the [TimeUnit] cannot be cleared
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let time = Time::build("12:21:46")?;
+    /// let hour = time.clear_unit(TimeUnit::Hour)?;
+    /// assert_eq!(hour.to_string(), "00:21:46".to_string());
+    /// let minute = time.clear_unit(TimeUnit::Minute)?;
+    /// assert_eq!(minute.to_string(), "12:00:46".to_string());
+    /// let second = time.clear_unit(TimeUnit::Second)?;
+    /// assert_eq!(second.to_string(), "12:21:00".to_string());
+    /// ```
+    fn clear_unit(&self, unit: TimeUnit) -> Result<Self, SpanError> {
+        let time = match unit {
+            TimeUnit::Hour => self.time.with_hour(0).ok_or(SpanError::ClearUnit(
+                "Error while setting hour to 0".to_string(),
+            )),
+            TimeUnit::Minute => self.time.with_minute(0).ok_or(SpanError::ClearUnit(
+                "Error while setting minute to 0".to_string(),
+            )),
+            TimeUnit::Second => self.time.with_second(0).ok_or(SpanError::ClearUnit(
+                "Error while setting second to 0".to_string(),
+            )),
+        }
+        .err_ctx(TimeError)?;
+        Ok(Self {
+            time,
+            format: self.format.clone(),
+        })
+    }
 }
 
 impl From<NaiveDateTime> for Time {

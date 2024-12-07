@@ -6,8 +6,8 @@ pub enum SpanError {
     ParseFromStr(#[from] chrono::ParseError),
     #[error("ParseFromTimestamp: {0}")]
     ParseFromTimestamp(String),
-    #[error("ClearTime: {0}")]
-    ClearTime(String),
+    #[error("ClearUnit: {0}")]
+    ClearUnit(String),
     #[error("InvalidUpdate: {0}")]
     InvalidUpdate(String),
     #[error("{1} ➤  {0}")]

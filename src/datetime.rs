@@ -91,7 +91,7 @@ impl DateTime {
             .with_hour(0)
             .and_then(|datetime| datetime.with_minute(0))
             .and_then(|datetime| datetime.with_second(0))
-            .ok_or(SpanError::ClearTime(
+            .ok_or(SpanError::ClearUnit(
                 "Error while setting start of day".to_string(),
             ))
             .err_ctx(DateTimeError)?;
@@ -257,6 +257,55 @@ impl Span<DateTimeUnit> for DateTime {
             }
         }
         .abs())
+    }
+
+    /// Clear the [DateTimeUnit] from [DateTime]
+    ///
+    /// # Errors
+    /// Return an Err(_) if the [DateTimeUnit] is not valid
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let datetime = DateTime::build("2023-05-17 09:05:12")?;
+    /// let year = datetime.clear_unit(DateTimeUnit::Year)?;
+    /// assert_eq!(year.to_string(), "1970-05-17 09:05:12".to_string());
+    /// let month = datetime.clear_unit(DateTimeUnit::Month)?;
+    /// assert_eq!(month.to_string(), "2023-01-17 09:05:12".to_string());
+    /// let day = datetime.clear_unit(DateTimeUnit::Day)?;
+    /// assert_eq!(day.to_string(), "2023-05-01 09:05:12".to_string());
+    /// let hour = datetime.clear_unit(DateTimeUnit::Hour)?;
+    /// assert_eq!(hour.to_string(), "2023-05-17 00:05:12".to_string());
+    /// let minute = datetime.clear_unit(DateTimeUnit::Minute)?;
+    /// assert_eq!(minute.to_string(), "2023-05-17 09:00:12".to_string());
+    /// let second = datetime.clear_unit(DateTimeUnit::Second)?;
+    /// assert_eq!(second.to_string(), "2023-05-17 09:05:00".to_string());
+    /// ```
+    fn clear_unit(&self, unit: DateTimeUnit) -> Result<Self, SpanError> {
+        let datetime = match unit {
+            DateTimeUnit::Year => self.datetime.with_year(1970).ok_or(SpanError::ClearUnit(
+                "Error while setting year to 1970".to_string(),
+            )),
+            DateTimeUnit::Month => self.datetime.with_month(1).ok_or(SpanError::ClearUnit(
+                "Error while setting month to 1".to_string(),
+            )),
+            DateTimeUnit::Day => self.datetime.with_day(1).ok_or(SpanError::ClearUnit(
+                "Error while setting day to 1".to_string(),
+            )),
+            DateTimeUnit::Hour => self.datetime.with_hour(0).ok_or(SpanError::ClearUnit(
+                "Error while setting hour to 0".to_string(),
+            )),
+            DateTimeUnit::Minute => self.datetime.with_minute(0).ok_or(SpanError::ClearUnit(
+                "Error while setting minute to 0".to_string(),
+            )),
+            DateTimeUnit::Second => self.datetime.with_second(0).ok_or(SpanError::ClearUnit(
+                "Error while setting second to 0".to_string(),
+            )),
+        }
+        .err_ctx(DateTimeError)?;
+        Ok(Self {
+            datetime,
+            format: self.format.clone(),
+        })
     }
 }
 

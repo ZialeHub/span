@@ -22,4 +22,5 @@ where
     fn is_in_future(&self) -> Result<bool, SpanError>;
     fn elapsed(&self, lhs: &Self) -> Duration;
     fn unit_in_between(&self, unit: U, lhs: &Self) -> Result<i64, SpanError>;
+    fn clear_unit(&self, unit: U) -> Result<Self, SpanError>;
 }

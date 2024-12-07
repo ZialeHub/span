@@ -40,6 +40,11 @@ let _span = crate::builder::SpanBuilder::builder()
     .datetime_format("%Y-%m-%d %H:%M:%S")
     .build();
 
+let mut time = Time::build("T23:17:12Z.000")?;
+
+time.update(TimeUnit::Hour, 1)?;
+assert_eq!(time.to_string(), "T00:17:12Z.000");
+
 let mut datetime = DateTime::build("2024-10-31 06:32:28")?;
 
 datetime.update(DateTimeUnit::Month, 1)?;

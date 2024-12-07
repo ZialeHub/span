@@ -207,17 +207,17 @@ impl Time {
     ///
     /// # Example
     /// ```rust,ignore
-    /// let rhs = Time::build("01:34:45")?;
-    /// let lhs = Time::build("00:00:00")?;
-    /// assert_eq!(rhs.unit_elapsed(TimeUnit::Hour, &lhs), 1);
-    /// assert_eq!(rhs.unit_elapsed(TimeUnit::Minute, &lhs), 94);
-    /// assert_eq!(rhs.unit_elapsed(TimeUnit::Second, &lhs), 5685);
+    /// let lhs = Time::build("01:34:45")?;
+    /// let rhs = Time::build("00:00:00")?;
+    /// assert_eq!(lhs.unit_elapsed(&rhs, TimeUnit::Hour), 1);
+    /// assert_eq!(lhs.unit_elapsed(&rhs, TimeUnit::Minute), 94);
+    /// assert_eq!(lhs.unit_elapsed(&rhs, TimeUnit::Second), 5685);
     /// ```
-    pub fn unit_elapsed(&self, unit: TimeUnit, lhs: &Self) -> i64 {
+    pub fn unit_elapsed(&self, rhs: &Self, unit: TimeUnit) -> i64 {
         match unit {
-            TimeUnit::Hour => self.time.signed_duration_since(lhs.time).num_hours(),
-            TimeUnit::Minute => self.time.signed_duration_since(lhs.time).num_minutes(),
-            TimeUnit::Second => self.time.signed_duration_since(lhs.time).num_seconds(),
+            TimeUnit::Hour => self.time.signed_duration_since(rhs.time).num_hours(),
+            TimeUnit::Minute => self.time.signed_duration_since(rhs.time).num_minutes(),
+            TimeUnit::Second => self.time.signed_duration_since(rhs.time).num_seconds(),
         }
     }
 }
@@ -484,10 +484,10 @@ pub mod test {
     #[test]
     fn unit_elapsed() -> Result<(), SpanError> {
         let time = Time::build("01:34:45")?;
-        let lhs = Time::build("00:00:00")?;
-        let hours_in_between = time.unit_elapsed(TimeUnit::Hour, &lhs);
-        let minutes_in_between = time.unit_elapsed(TimeUnit::Minute, &lhs);
-        let seconds_in_between = time.unit_elapsed(TimeUnit::Second, &lhs);
+        let rhs = Time::build("00:00:00")?;
+        let hours_in_between = time.unit_elapsed(&rhs, TimeUnit::Hour);
+        let minutes_in_between = time.unit_elapsed(&rhs, TimeUnit::Minute);
+        let seconds_in_between = time.unit_elapsed(&rhs, TimeUnit::Second);
         assert_eq!(hours_in_between, 1);
         assert_eq!(minutes_in_between, hours_in_between * 60 + 34);
         assert_eq!(seconds_in_between, minutes_in_between * 60 + 45);

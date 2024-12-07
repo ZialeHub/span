@@ -213,20 +213,20 @@ impl Date {
     ///
     /// # Example
     /// ```rust,ignore
-    /// let rhs = Date::build("2023-10-20")?;
-    /// let lhs = Date::build("2023-10-09")?;
-    /// assert_eq!(rhs.unit_elapsed(DateUnit::Day, &lhs), Ok(11));
+    /// let lhs = Date::build("2023-10-20")?;
+    /// let rhs = Date::build("2023-10-09")?;
+    /// assert_eq!(lhs.unit_elapsed(&rhs, DateUnit::Day), Ok(11));
     /// ```
-    pub fn unit_elapsed(&self, unit: DateUnit, lhs: &Self) -> Result<i64, SpanError> {
+    pub fn unit_elapsed(&self, rhs: &Self, unit: DateUnit) -> Result<i64, SpanError> {
         Ok(match unit {
-            DateUnit::Year => self.date.year() as i64 - lhs.date.year() as i64,
+            DateUnit::Year => self.date.year() as i64 - rhs.date.year() as i64,
             DateUnit::Month => {
                 self.date.year() as i64 * 12 + self.date.month() as i64
-                    - (lhs.date.year() as i64 * 12 + lhs.date.month() as i64)
+                    - (rhs.date.year() as i64 * 12 + rhs.date.month() as i64)
             }
             DateUnit::Day => {
                 let self_utc: chrono::DateTime<Utc> = self.try_into()?;
-                let lhs_utc: chrono::DateTime<Utc> = lhs.try_into()?;
+                let lhs_utc: chrono::DateTime<Utc> = rhs.try_into()?;
                 self_utc.signed_duration_since(lhs_utc).num_days()
             }
         })
@@ -538,10 +538,10 @@ pub mod test {
     #[test]
     fn unit_elapsed() -> Result<(), SpanError> {
         let date = Date::build("2023-10-09")?;
-        let lhs = Date::build("2020-02-08")?;
-        let years_in_between = date.unit_elapsed(DateUnit::Year, &lhs)?;
-        let months_in_between = date.unit_elapsed(DateUnit::Month, &lhs)?;
-        let days_in_between = date.unit_elapsed(DateUnit::Day, &lhs)?;
+        let rhs = Date::build("2020-02-08")?;
+        let years_in_between = date.unit_elapsed(&rhs, DateUnit::Year)?;
+        let months_in_between = date.unit_elapsed(&rhs, DateUnit::Month)?;
+        let days_in_between = date.unit_elapsed(&rhs, DateUnit::Day)?;
         assert_eq!(years_in_between, 3);
         assert_eq!(months_in_between, years_in_between * 12 + 8);
         assert_eq!(days_in_between, 1338);
@@ -551,10 +551,10 @@ pub mod test {
     #[test]
     fn unit_elapsed_leap_year_days() -> Result<(), SpanError> {
         let date = Date::build("2024-03-12")?;
-        let lhs = Date::build("2024-01-12")?;
-        let years_in_between = date.unit_elapsed(DateUnit::Year, &lhs)?;
-        let months_in_between = date.unit_elapsed(DateUnit::Month, &lhs)?;
-        let days_in_between = date.unit_elapsed(DateUnit::Day, &lhs)?;
+        let rhs = Date::build("2024-01-12")?;
+        let years_in_between = date.unit_elapsed(&rhs, DateUnit::Year)?;
+        let months_in_between = date.unit_elapsed(&rhs, DateUnit::Month)?;
+        let days_in_between = date.unit_elapsed(&rhs, DateUnit::Day)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 59);
@@ -564,10 +564,10 @@ pub mod test {
     #[test]
     fn unit_elapsed_non_leap_year_days() -> Result<(), SpanError> {
         let date = Date::build("2023-03-12")?;
-        let lhs = Date::build("2023-01-12")?;
-        let years_in_between = date.unit_elapsed(DateUnit::Year, &lhs)?;
-        let months_in_between = date.unit_elapsed(DateUnit::Month, &lhs)?;
-        let days_in_between = date.unit_elapsed(DateUnit::Day, &lhs)?;
+        let rhs = Date::build("2023-01-12")?;
+        let years_in_between = date.unit_elapsed(&rhs, DateUnit::Year)?;
+        let months_in_between = date.unit_elapsed(&rhs, DateUnit::Month)?;
+        let days_in_between = date.unit_elapsed(&rhs, DateUnit::Day)?;
         assert_eq!(years_in_between, 0);
         assert_eq!(months_in_between, years_in_between * 12 + 2);
         assert_eq!(days_in_between, 58);

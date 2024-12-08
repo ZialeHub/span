@@ -175,9 +175,9 @@ pub mod test {
             .build();
         datetime::DateTime::new(2023, 01, 01)?
             .with_time(12, 00, 00)?
-            .format("%Y-%m-%d %H:%M:%S");
-        date::Date::new(2023, 01, 01)?.format("%Y-%m-%d");
-        time::Time::new(12, 00, 00)?.format("%H:%M:%S");
+            .format(Some("%Y-%m-%d %H:%M:%S"));
+        date::Date::new(2023, 01, 01)?.format(Some("%Y-%m-%d"));
+        time::Time::new(12, 00, 00)?.format(Some("%H:%M:%S"));
         Ok(())
     }
 

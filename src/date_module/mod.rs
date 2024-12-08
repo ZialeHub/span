@@ -96,9 +96,14 @@ pub mod date {
 
         /// Setter for the format
         ///
+        /// None will use the [BASE_DATE_FORMAT](static@BASE_DATE_FORMAT)
+        ///
         ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
-        fn format(mut self, format: impl ToString) -> Self {
-            self.format = format.to_string();
+        fn format(mut self, format: Option<impl ToString>) -> Self {
+            self.format = match format {
+                Some(format) => format.to_string(),
+                None => BASE_DATE_FORMAT.get().to_string(),
+            };
             self
         }
 
@@ -453,7 +458,7 @@ pub mod date {
 
         #[test]
         fn date_serialize_format() -> Result<(), SpanError> {
-            let date = Date::new(2023, 10, 09)?.format("%d/%m/%Y");
+            let date = Date::new(2023, 10, 09)?.format(Some("%d/%m/%Y"));
             let Ok(serialized) = serde_json::to_string(&date) else {
                 panic!("Error while serializing date");
             };

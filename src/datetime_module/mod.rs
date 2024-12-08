@@ -10,6 +10,8 @@ pub mod datetime {
 
     use crate::{
         error::{DateTimeError, ErrorContext, SpanError},
+        span::Span,
+        timestamp::{TimestampMicro, TimestampMilli, TimestampNano},
         BaseFormat, GetInner,
     };
 
@@ -66,30 +68,26 @@ pub mod datetime {
     }
 
     impl DateTime {
-        /// Create a new variable [DateTime] from year, month and day
-        ///
-        /// Default time is set to 00:00:00
-        ///
-        /// Use [BASE_DATETIME_FORMAT](static@BASE_DATETIME_FORMAT) as default format
-        ///
-        /// # Example
-        ///
-        /// ```rust,ignore
-        /// let datetime = DateTime::new(2024, 09, 27)?;
+        /// Getter for the datetime
+        pub fn datetime(&self) -> NaiveDateTime {
+            self.datetime
+        }
+
+        /// Return the timestamp from the [DateTime]
+        pub fn timestamp(&self) -> i64 {
+            self.datetime.and_utc().timestamp()
+        }
+
+        /// let datetime = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
+        /// let datetime = datetime.clear_time()?;
+        /// assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
         /// ```
-        ///
-        /// # Errors
-        ///
-        /// Return an Err(_) if `datetime` is not formated with `format`
-        pub fn new(year: i32, month: u32, day: u32) -> Result<Self, SpanError> {
-            let date = chrono::NaiveDate::from_ymd_opt(year, month, day)
-                .ok_or(SpanError::InvalidDate(year, month, day))
-                .err_ctx(DateTimeError)?;
-            let datetime = NaiveDateTime::new(date, chrono::NaiveTime::default());
-            Ok(Self {
+        pub fn clear_time(&self) -> Self {
+            let datetime = NaiveDateTime::new(self.datetime.date(), chrono::NaiveTime::default());
+            Self {
                 datetime,
                 format: BASE_DATETIME_FORMAT.get().to_string(),
-            })
+            }
         }
 
         /// Create a new variable [DateTime] from the parameter `datetime` formated with [BASE_DATETIME_FORMAT](static@BASE_DATETIME_FORMAT)
@@ -110,17 +108,46 @@ pub mod datetime {
             self.datetime = self.datetime.date().and_time(time);
             Ok(self)
         }
+    }
 
-        /// Getter for the datetime
-        pub fn datetime(&self) -> NaiveDateTime {
-            self.datetime
+    impl Span<DateTimeUnit, i32> for DateTime {
+        /// Create a new variable [DateTime] from year, month and day
+        ///
+        /// Default time is set to 00:00:00
+        ///
+        /// Use [BASE_DATETIME_FORMAT](static@BASE_DATETIME_FORMAT) as default format
+        ///
+        /// # Example
+        ///
+        /// ```rust,ignore
+        /// let datetime = DateTime::new(2024, 09, 27)?;
+        /// ```
+        ///
+        /// # Errors
+        ///
+        /// Return an Err(_) if `datetime` is not formated with `format`
+        fn new(year: i32, month: u32, day: u32) -> Result<Self, SpanError> {
+            let date = chrono::NaiveDate::from_ymd_opt(year, month, day)
+                .ok_or(SpanError::InvalidDate(year, month, day))
+                .err_ctx(DateTimeError)?;
+            let datetime = NaiveDateTime::new(date, chrono::NaiveTime::default());
+            Ok(Self {
+                datetime,
+                format: BASE_DATETIME_FORMAT.get().to_string(),
+            })
         }
 
         /// Setter for the format
         ///
         ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
-        pub fn format(mut self, format: &str) -> Self {
+        fn format(mut self, format: impl ToString) -> Self {
             self.format = format.to_string();
+            self
+        }
+
+        /// Set the format to [BASE_DATETIME_FORMAT](static@BASE_DATETIME_FORMAT)
+        fn default_format(mut self) -> Self {
+            self.format = BASE_DATETIME_FORMAT.get().to_string();
             self
         }
 
@@ -139,7 +166,7 @@ pub mod datetime {
         ///
         /// # Errors
         /// The function will return an Err(_) if the operation is not possible or [chrono] fails to update the datetime
-        pub fn update(&self, unit: DateTimeUnit, value: i32) -> Result<Self, SpanError> {
+        fn update(&self, unit: DateTimeUnit, value: i32) -> Result<Self, SpanError> {
             let datetime = match unit {
                 DateTimeUnit::Year if value > 0 => self
                     .datetime
@@ -197,7 +224,7 @@ pub mod datetime {
         ///
         /// # Errors
         /// The function will return an Err(_) if the operation is not possible
-        pub fn next(&self, unit: DateTimeUnit) -> Result<Self, SpanError> {
+        fn next(&self, unit: DateTimeUnit) -> Result<Self, SpanError> {
             self.update(unit, 1)
         }
 
@@ -210,7 +237,7 @@ pub mod datetime {
         /// assert!(datetime.matches(DateTimeUnit::Month, 10));
         /// assert!(!datetime.matches(DateTimeUnit::Minute, 53));
         /// ```
-        pub fn matches(&self, unit: DateTimeUnit, value: u32) -> bool {
+        fn matches(&self, unit: DateTimeUnit, value: u32) -> bool {
             match unit {
                 DateTimeUnit::Year => self.datetime.year() == value as i32,
                 DateTimeUnit::Month => self.datetime.month() == value,
@@ -222,7 +249,7 @@ pub mod datetime {
         }
 
         /// Return the current [DateTime] from the system
-        pub fn now() -> Result<Self, SpanError> {
+        fn now() -> Result<Self, SpanError> {
             let datetime = Local::now();
             Self::new(datetime.year(), datetime.month(), datetime.day())?.with_time(
                 datetime.hour(),
@@ -243,7 +270,7 @@ pub mod datetime {
         /// // If Now is 2024-01-01 00:00:00
         /// assert!(datetime.is_in_future()?);
         /// ```
-        pub fn is_in_future(&self) -> Result<bool, SpanError> {
+        fn is_in_future(&self) -> Result<bool, SpanError> {
             let datetime = Local::now();
             let now = Self::new(datetime.year(), datetime.month(), datetime.day())?.with_time(
                 datetime.hour(),
@@ -261,7 +288,7 @@ pub mod datetime {
         /// let lhs = DateTime::new(2022, 10, 09)?;
         /// assert_eq!(rhs.elapsed(&lhs), TimeDelta::try_days(365).unwrap());
         /// ```
-        pub fn elapsed(&self, lhs: &Self) -> Duration {
+        fn elapsed(&self, lhs: &Self) -> Duration {
             self.datetime.signed_duration_since(lhs.datetime)
         }
 
@@ -284,58 +311,81 @@ pub mod datetime {
         /// assert_eq!(minutes_in_between, hours_in_between * 60 + 1);
         /// assert_eq!(seconds_in_between, minutes_in_between * 60 + 1);
         /// ```
-        pub fn unit_elapsed(&self, rhs: &Self, unit: DateTimeUnit) -> i32 {
-            match unit {
-                DateTimeUnit::Year => self.datetime.year() - rhs.datetime.year(),
+        fn unit_elapsed(&self, rhs: &Self, unit: DateTimeUnit) -> Result<i64, SpanError> {
+            Ok(match unit {
+                DateTimeUnit::Year => (self.datetime.year() - rhs.datetime.year()) as i64,
                 DateTimeUnit::Month => {
-                    self.datetime.year() * 12 + self.datetime.month() as i32
-                        - (rhs.datetime.year() * 12 + rhs.datetime.month() as i32)
+                    self.datetime.year() as i64 * 12 + self.datetime.month() as i64
+                        - (rhs.datetime.year() as i64 * 12 + rhs.datetime.month() as i64)
                 }
                 DateTimeUnit::Day => {
-                    (self.datetime.and_utc().timestamp() as i32
-                        - rhs.datetime.and_utc().timestamp() as i32)
+                    (self.datetime.and_utc().timestamp() - rhs.datetime.and_utc().timestamp())
                         / 60
                         / 60
                         / 24
                 }
                 DateTimeUnit::Hour => {
-                    (self.datetime.and_utc().timestamp() as i32
-                        - rhs.datetime.and_utc().timestamp() as i32)
+                    (self.datetime.and_utc().timestamp() - rhs.datetime.and_utc().timestamp())
                         / 60
                         / 60
                 }
                 DateTimeUnit::Minute => {
-                    (self.datetime.and_utc().timestamp() as i32
-                        - rhs.datetime.and_utc().timestamp() as i32)
-                        / 60
+                    (self.datetime.and_utc().timestamp() - rhs.datetime.and_utc().timestamp()) / 60
                 }
                 DateTimeUnit::Second => {
-                    self.datetime.and_utc().timestamp() as i32
-                        - rhs.datetime.and_utc().timestamp() as i32
+                    self.datetime.and_utc().timestamp() - rhs.datetime.and_utc().timestamp()
                 }
             }
-            .abs()
+            .abs())
         }
 
-        /// Return the timestamp from the [DateTime]
-        pub fn timestamp(&self) -> i64 {
-            self.datetime.and_utc().timestamp()
-        }
-
-        /// Clear the time from the [DateTime]
+        /// Clear the [DateTimeUnit] from [DateTime]
+        ///
+        /// # Errors
+        /// Return an Err(_) if the [DateTimeUnit] is not valid
         ///
         /// # Example
         /// ```rust,ignore
-        /// let datetime = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
-        /// let datetime = datetime.clear_time()?;
-        /// assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
+        /// let datetime = DateTime::build("2023-05-17 09:05:12")?;
+        /// let year = datetime.clear_unit(DateTimeUnit::Year)?;
+        /// assert_eq!(year.to_string(), "1970-05-17 09:05:12".to_string());
+        /// let month = datetime.clear_unit(DateTimeUnit::Month)?;
+        /// assert_eq!(month.to_string(), "2023-01-17 09:05:12".to_string());
+        /// let day = datetime.clear_unit(DateTimeUnit::Day)?;
+        /// assert_eq!(day.to_string(), "2023-05-01 09:05:12".to_string());
+        /// let hour = datetime.clear_unit(DateTimeUnit::Hour)?;
+        /// assert_eq!(hour.to_string(), "2023-05-17 00:05:12".to_string());
+        /// let minute = datetime.clear_unit(DateTimeUnit::Minute)?;
+        /// assert_eq!(minute.to_string(), "2023-05-17 09:00:12".to_string());
+        /// let second = datetime.clear_unit(DateTimeUnit::Second)?;
+        /// assert_eq!(second.to_string(), "2023-05-17 09:05:00".to_string());
         /// ```
-        pub fn clear_time(&self) -> Self {
-            let datetime = NaiveDateTime::new(self.datetime.date(), chrono::NaiveTime::default());
-            Self {
-                datetime,
-                format: BASE_DATETIME_FORMAT.get().to_string(),
+        fn clear_unit(&self, unit: DateTimeUnit) -> Result<Self, SpanError> {
+            let datetime = match unit {
+                DateTimeUnit::Year => self.datetime.with_year(1970).ok_or(SpanError::ClearUnit(
+                    "Error while setting year to 1970".to_string(),
+                )),
+                DateTimeUnit::Month => self.datetime.with_month(1).ok_or(SpanError::ClearUnit(
+                    "Error while setting month to 1".to_string(),
+                )),
+                DateTimeUnit::Day => self.datetime.with_day(1).ok_or(SpanError::ClearUnit(
+                    "Error while setting day to 1".to_string(),
+                )),
+                DateTimeUnit::Hour => self.datetime.with_hour(0).ok_or(SpanError::ClearUnit(
+                    "Error while setting hour to 0".to_string(),
+                )),
+                DateTimeUnit::Minute => self.datetime.with_minute(0).ok_or(SpanError::ClearUnit(
+                    "Error while setting minute to 0".to_string(),
+                )),
+                DateTimeUnit::Second => self.datetime.with_second(0).ok_or(SpanError::ClearUnit(
+                    "Error while setting second to 0".to_string(),
+                )),
             }
+            .err_ctx(DateTimeError)?;
+            Ok(Self {
+                datetime,
+                format: self.format.clone(),
+            })
         }
     }
 
@@ -348,32 +398,50 @@ pub mod datetime {
         }
     }
 
-    impl TryFrom<i32> for DateTime {
-        type Error = SpanError;
-        fn try_from(timestamp: i32) -> Result<Self, Self::Error> {
-            let datetime = chrono::DateTime::from_timestamp(timestamp as i64, 0)
-                .ok_or(SpanError::ParseFromTimestamp(
-                    "Error while parsing timestamp from i32".to_string(),
-                ))
-                .err_ctx(DateTimeError)?;
+    impl TryFrom<TimestampMilli> for crate::datetime::DateTime {
+        type Error = crate::error::SpanError;
+
+        fn try_from(timestamp: TimestampMilli) -> Result<Self, Self::Error> {
+            let datetime = chrono::DateTime::from_timestamp(*timestamp, 0).ok_or(
+                crate::error::SpanError::ParseFromTimestamp(
+                    "Error while parsing timestamp".to_string(),
+                ),
+            )?;
             Ok(Self {
                 datetime: datetime.naive_utc(),
-                format: BASE_DATETIME_FORMAT.get(),
+                format: crate::datetime::BASE_DATETIME_FORMAT.get(),
             })
         }
     }
 
-    impl TryFrom<i64> for DateTime {
-        type Error = SpanError;
-        fn try_from(timestamp: i64) -> Result<Self, Self::Error> {
-            let datetime = chrono::DateTime::from_timestamp(timestamp, 0)
-                .ok_or(SpanError::ParseFromTimestamp(
-                    "Error while parsing timestamp from i64".to_string(),
-                ))
-                .err_ctx(DateTimeError)?;
+    impl TryFrom<TimestampMicro> for crate::datetime::DateTime {
+        type Error = crate::error::SpanError;
+
+        fn try_from(timestamp: TimestampMicro) -> Result<Self, Self::Error> {
+            let datetime = chrono::DateTime::from_timestamp(*timestamp / 1_000, 0).ok_or(
+                crate::error::SpanError::ParseFromTimestamp(
+                    "Error while parsing timestamp".to_string(),
+                ),
+            )?;
             Ok(Self {
                 datetime: datetime.naive_utc(),
-                format: BASE_DATETIME_FORMAT.get(),
+                format: crate::datetime::BASE_DATETIME_FORMAT.get(),
+            })
+        }
+    }
+
+    impl TryFrom<TimestampNano> for crate::datetime::DateTime {
+        type Error = crate::error::SpanError;
+
+        fn try_from(timestamp: TimestampNano) -> Result<Self, Self::Error> {
+            let datetime = chrono::DateTime::from_timestamp(*timestamp / 1_000_000, 0).ok_or(
+                crate::error::SpanError::ParseFromTimestamp(
+                    "Error while parsing timestamp".to_string(),
+                ),
+            )?;
+            Ok(Self {
+                datetime: datetime.naive_utc(),
+                format: crate::datetime::BASE_DATETIME_FORMAT.get(),
             })
         }
     }
@@ -610,6 +678,41 @@ pub mod datetime {
         }
 
         #[test]
+        fn datetime_serialize_in_struct() -> Result<(), SpanError> {
+            #[derive(Serialize)]
+            struct Test {
+                begin_at: DateTime,
+            }
+            let test = Test {
+                begin_at: DateTime::new(2023, 10, 09)?,
+            };
+            let Ok(serialized) = serde_json::to_string(&test) else {
+                panic!("Error while serializing datetime");
+            };
+            assert_eq!(
+            serialized,
+            "{\"begin_at\":{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%Y-%m-%d %H:%M:%S\"}}".to_string()
+        );
+            Ok(())
+        }
+
+        #[test]
+        fn datetime_deserialize_in_struct() -> Result<(), SpanError> {
+            #[derive(Deserialize)]
+            struct Test {
+                begin_at: DateTime,
+            }
+            let serialized =
+            "{\"begin_at\":{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%Y-%m-%d %H:%M:%S\"}}".to_string();
+            let Ok(test) = serde_json::from_str::<Test>(&serialized) else {
+                panic!("Error while deserializing datetime");
+            };
+            assert_eq!(test.begin_at.to_string(), "2023-10-09 00:00:00".to_string());
+            assert_eq!(test.begin_at.format, BASE_DATETIME_FORMAT.get().to_string());
+            Ok(())
+        }
+
+        #[test]
         fn next_month_january_to_february() -> Result<(), SpanError> {
             let mut datetime = DateTime::new(2023, 01, 31)?.with_time(12, 09, 27)?;
             datetime = datetime.next(DateTimeUnit::Month)?;
@@ -746,12 +849,12 @@ pub mod datetime {
         fn unit_elapsed() -> Result<(), SpanError> {
             let datetime = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
             let rhs = DateTime::new(2023, 10, 08)?.with_time(00, 00, 00)?;
-            let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year);
-            let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month);
-            let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day);
-            let hours_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Hour);
-            let minutes_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Minute);
-            let seconds_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Second);
+            let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year)?;
+            let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month)?;
+            let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day)?;
+            let hours_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Hour)?;
+            let minutes_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Minute)?;
+            let seconds_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Second)?;
             assert_eq!(years_in_between, 0);
             assert_eq!(months_in_between, 0);
             assert_eq!(days_in_between, 1);
@@ -765,9 +868,9 @@ pub mod datetime {
         fn unit_elapsed_leap_year_days() -> Result<(), SpanError> {
             let datetime = DateTime::new(2024, 03, 12)?;
             let rhs = DateTime::new(2024, 01, 12)?;
-            let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year);
-            let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month);
-            let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day);
+            let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year)?;
+            let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month)?;
+            let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day)?;
             assert_eq!(years_in_between, 0);
             assert_eq!(months_in_between, years_in_between * 12 + 2);
             assert_eq!(days_in_between, 60);
@@ -778,9 +881,9 @@ pub mod datetime {
         fn unit_elapsed_non_leap_year_days() -> Result<(), SpanError> {
             let datetime = DateTime::new(2023, 03, 12)?;
             let rhs = DateTime::new(2023, 01, 12)?;
-            let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year);
-            let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month);
-            let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day);
+            let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year)?;
+            let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month)?;
+            let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day)?;
             assert_eq!(years_in_between, 0);
             assert_eq!(months_in_between, years_in_between * 12 + 2);
             assert_eq!(days_in_between, 59);
@@ -792,6 +895,61 @@ pub mod datetime {
             let datetime = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
             let datetime = datetime.clear_time();
             assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
+            Ok(())
+        }
+
+        #[test]
+        fn datetime_from_timestamp_milli() -> Result<(), SpanError> {
+            let timestamp: TimestampMilli = 1735683010.into();
+            let datetime: DateTime = DateTime::try_from(timestamp)?;
+            assert_eq!(datetime.to_string(), "2024-12-31 22:10:10");
+            Ok(())
+        }
+
+        #[test]
+        fn datetime_from_timestamp_micro() -> Result<(), SpanError> {
+            let timestamp: TimestampMicro = 1735683010000.into();
+            let datetime: DateTime = DateTime::try_from(timestamp)?;
+            assert_eq!(datetime.to_string(), "2024-12-31 22:10:10");
+            Ok(())
+        }
+
+        #[test]
+        fn datetime_from_timestamp_nano() -> Result<(), SpanError> {
+            let timestamp: TimestampNano = 1735683010000000.into();
+            let datetime: DateTime = DateTime::try_from(timestamp)?;
+            assert_eq!(datetime.to_string(), "2024-12-31 22:10:10");
+            Ok(())
+        }
+
+        #[test]
+        fn timestamp_milli_into_datetime() -> Result<(), SpanError> {
+            let timestamp: TimestampMilli = 1735683010.into();
+            let datetime: DateTime = timestamp.try_into()?;
+            assert_eq!(datetime.to_string(), "2024-12-31 22:10:10");
+            Ok(())
+        }
+
+        #[test]
+        fn timestamp_micro_into_datetime() -> Result<(), SpanError> {
+            let timestamp: TimestampMicro = 1735683010000.into();
+            let datetime: DateTime = timestamp.try_into()?;
+            assert_eq!(datetime.to_string(), "2024-12-31 22:10:10");
+            Ok(())
+        }
+
+        #[test]
+        fn timestamp_nano_into_datetime() -> Result<(), SpanError> {
+            let timestamp: TimestampNano = 1735683010000000.into();
+            let datetime: DateTime = timestamp.try_into()?;
+            assert_eq!(datetime.to_string(), "2024-12-31 22:10:10");
+            Ok(())
+        }
+
+        #[test]
+        fn i64_into_datetime() -> Result<(), SpanError> {
+            let datetime: DateTime = TimestampMilli::from(1735683010).try_into()?;
+            assert_eq!(datetime.to_string(), "2024-12-31 22:10:10");
             Ok(())
         }
     }
@@ -823,6 +981,8 @@ mod date_into_datetime {
 
     #[cfg(test)]
     mod test {
+        use crate::span::Span;
+
         #[test]
         fn date_into_datetime() -> Result<(), crate::error::SpanError> {
             let date = crate::date::Date::new(2023, 10, 09)?;
@@ -872,6 +1032,8 @@ mod time_into_datetime {
 
     #[cfg(test)]
     mod test {
+        use crate::span::Span;
+
         #[test]
         fn time_into_datetime() -> Result<(), crate::error::SpanError> {
             let time = crate::time::Time::new(13, 27, 57)?;

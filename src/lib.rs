@@ -9,8 +9,10 @@ pub mod date_module;
 pub mod datetime_module;
 pub mod error;
 pub mod prelude;
+pub mod span;
 #[cfg(feature = "time")]
 pub mod time_module;
+pub mod timestamp;
 
 #[cfg(feature = "datetime")]
 use std::ops::Deref;

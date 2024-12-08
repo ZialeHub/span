@@ -10,6 +10,7 @@ pub mod date {
 
     use crate::{
         error::{DateError, ErrorContext, SpanError},
+        span::Span,
         BaseFormat, GetInner,
     };
 
@@ -63,6 +64,13 @@ pub mod date {
     }
 
     impl Date {
+        /// Getter for the inner date
+        pub fn date(&self) -> NaiveDate {
+            self.date
+        }
+    }
+
+    impl Span<DateUnit, i32> for Date {
         /// Create a new variable [Date] from year, month and day
         ///
         /// Use [BASE_DATE_FORMAT](static@BASE_DATE_FORMAT) as default format for date
@@ -76,7 +84,7 @@ pub mod date {
         /// # Errors
         ///
         /// Return an Err(_) if `time` is not formated with `format`
-        pub fn new(year: i32, month: u32, day: u32) -> Result<Self, SpanError> {
+        fn new(year: i32, month: u32, day: u32) -> Result<Self, SpanError> {
             let Some(date) = NaiveDate::from_ymd_opt(year, month, day) else {
                 return Err(SpanError::InvalidDate(year, month, day)).err_ctx(DateError);
             };
@@ -86,16 +94,17 @@ pub mod date {
             })
         }
 
-        /// Getter for the date
-        pub fn date(&self) -> NaiveDate {
-            self.date
-        }
-
         /// Setter for the format
         ///
         ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
-        pub fn format(mut self, format: impl ToString) -> Self {
+        fn format(mut self, format: impl ToString) -> Self {
             self.format = format.to_string();
+            self
+        }
+
+        /// Set the format to [BASE_DATE_FORMAT](static@BASE_DATE_FORMAT)
+        fn default_format(mut self) -> Self {
+            self.format = BASE_DATE_FORMAT.get().to_string();
             self
         }
 
@@ -114,7 +123,7 @@ pub mod date {
         ///
         /// # Errors
         /// Return an Err(_) if the operation is not possible or if [chrono] fails
-        pub fn update(&self, unit: DateUnit, value: i32) -> Result<Self, SpanError> {
+        fn update(&self, unit: DateUnit, value: i32) -> Result<Self, SpanError> {
             let date = match unit {
                 DateUnit::Year if value > 0 => {
                     self.date.checked_add_months(Months::new(value as u32 * 12))
@@ -158,7 +167,7 @@ pub mod date {
         /// date.next(DateUnit::Day)?;
         /// assert_eq!(date.to_string(), "2023-10-10".to_string());
         /// ```
-        pub fn next(&self, unit: DateUnit) -> Result<Self, SpanError> {
+        fn next(&self, unit: DateUnit) -> Result<Self, SpanError> {
             self.update(unit, 1)
         }
 
@@ -171,16 +180,16 @@ pub mod date {
         /// assert!(date.matches(DateUnit::Month, 10));
         /// assert!(date.matches(DateUnit::Day, 9));
         /// ```
-        pub fn matches(&self, unit: DateUnit, value: i32) -> bool {
+        fn matches(&self, unit: DateUnit, value: u32) -> bool {
             match unit {
-                DateUnit::Year => self.date.year() == value,
-                DateUnit::Month => self.date.month() == value as u32,
-                DateUnit::Day => self.date.day() == value as u32,
+                DateUnit::Year => self.date.year() == value as i32,
+                DateUnit::Month => self.date.month() == value,
+                DateUnit::Day => self.date.day() == value,
             }
         }
 
         /// Return the current [Date] from the system
-        pub fn today() -> Result<Self, SpanError> {
+        fn now() -> Result<Self, SpanError> {
             let now = Local::now();
             Self::new(now.year(), now.month(), now.day())
         }
@@ -197,8 +206,8 @@ pub mod date {
         /// let date = Date::new(2023, 10, 09)?;
         /// assert!(date.is_in_future()?);
         /// ```
-        pub fn is_in_future(&self) -> Result<bool, SpanError> {
-            Ok(self.date > Self::today()?.date)
+        fn is_in_future(&self) -> Result<bool, SpanError> {
+            Ok(self.date > Self::now()?.date)
         }
 
         /// Elapsed [Duration] between two [Date]
@@ -209,7 +218,7 @@ pub mod date {
         /// let lhs = Date::new(2023, 10, 09)?;
         /// assert_eq!(rhs.elapsed(&lhs), TimeDelta::try_days(11).unwrap());
         /// ```
-        pub fn elapsed(&self, lhs: &Self) -> Duration {
+        fn elapsed(&self, lhs: &Self) -> Duration {
             self.date.signed_duration_since(lhs.date)
         }
 
@@ -221,7 +230,7 @@ pub mod date {
         /// let rhs = Date::new(2023, 10, 09)?;
         /// assert_eq!(lhs.unit_elapsed(&rhs, DateUnit::Day), Ok(11));
         /// ```
-        pub fn unit_elapsed(&self, rhs: &Self, unit: DateUnit) -> Result<i64, SpanError> {
+        fn unit_elapsed(&self, rhs: &Self, unit: DateUnit) -> Result<i64, SpanError> {
             Ok(match unit {
                 DateUnit::Year => self.date.year() as i64 - rhs.date.year() as i64,
                 DateUnit::Month => {
@@ -233,6 +242,40 @@ pub mod date {
                     let lhs_utc: chrono::DateTime<Utc> = rhs.try_into()?;
                     self_utc.signed_duration_since(lhs_utc).num_days()
                 }
+            })
+        }
+
+        /// Clear the [DateUnit] from the [Date]
+        ///
+        /// # Errors
+        /// Return an Err(_) if the [DateUnit] cannot be cleared
+        ///
+        /// # Example
+        /// ```rust,ignore
+        /// let date = Date::build("2023-10-09")?;
+        /// let year = date.clear_unit(DateUnit::Year)?;
+        /// assert_eq!(year.to_string(), "1970-10-09".to_string());
+        /// let month = date.clear_unit(DateUnit::Month)?;
+        /// assert_eq!(month.to_string(), "2023-01-09".to_string());
+        /// let day = date.clear_unit(DateUnit::Day)?;
+        /// assert_eq!(day.to_string(), "2023-10-01".to_string());
+        /// ```
+        fn clear_unit(&self, unit: DateUnit) -> Result<Self, SpanError> {
+            let date = match unit {
+                DateUnit::Year => self.date.with_year(1970).ok_or(SpanError::ClearUnit(
+                    "Error while setting year to 1970".to_string(),
+                )),
+                DateUnit::Month => self.date.with_month(1).ok_or(SpanError::ClearUnit(
+                    "Error while setting month to 1".to_string(),
+                )),
+                DateUnit::Day => self.date.with_day(1).ok_or(SpanError::ClearUnit(
+                    "Error while setting day to 1".to_string(),
+                )),
+            }
+            .err_ctx(DateError)?;
+            Ok(Self {
+                date,
+                format: self.format.clone(),
             })
         }
     }
@@ -439,6 +482,41 @@ pub mod date {
         }
 
         #[test]
+        fn date_serialize_in_struct() -> Result<(), SpanError> {
+            #[derive(Serialize)]
+            struct Test {
+                begin_at: Date,
+            }
+            let test = Test {
+                begin_at: Date::new(2023, 10, 09)?,
+            };
+            let Ok(serialized) = serde_json::to_string(&test) else {
+                panic!("Error while serializing date");
+            };
+            assert_eq!(
+                serialized,
+                "{\"begin_at\":{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}}".to_string()
+            );
+            Ok(())
+        }
+
+        #[test]
+        fn date_deserialize_in_struct() -> Result<(), SpanError> {
+            #[derive(Deserialize)]
+            struct Test {
+                begin_at: Date,
+            }
+            let serialized =
+                "{\"begin_at\":{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}}".to_string();
+            let Ok(test) = serde_json::from_str::<Test>(&serialized) else {
+                panic!("Error while deserializing date");
+            };
+            assert_eq!(test.begin_at.to_string(), "2023-10-09".to_string());
+            assert_eq!(test.begin_at.format, BASE_DATE_FORMAT.get().to_string());
+            Ok(())
+        }
+
+        #[test]
         fn next_month_january_to_february() -> Result<(), SpanError> {
             let mut date = Date::new(2023, 01, 31)?;
             date = date.next(DateUnit::Month)?;
@@ -505,7 +583,7 @@ pub mod date {
 
         #[test]
         fn is_in_future_yesterday() -> Result<(), SpanError> {
-            let mut date = Date::today()?;
+            let mut date = Date::now()?;
             date = date.update(DateUnit::Day, -1)?;
             assert!(!date.is_in_future()?);
             Ok(())
@@ -513,7 +591,7 @@ pub mod date {
 
         #[test]
         fn is_in_future_tomorrow() -> Result<(), SpanError> {
-            let mut date = Date::today()?;
+            let mut date = Date::now()?;
             date = date.update(DateUnit::Day, 1)?;
             assert!(date.is_in_future()?);
             Ok(())
@@ -521,7 +599,7 @@ pub mod date {
 
         #[test]
         fn is_in_future_now() -> Result<(), SpanError> {
-            let date = Date::today()?;
+            let date = Date::now()?;
             assert!(!date.is_in_future()?);
             Ok(())
         }
@@ -622,6 +700,8 @@ mod datetime_into_date {
 
     #[cfg(test)]
     mod test {
+        use crate::span::Span;
+
         #[test]
         fn datetime_into_date() -> Result<(), crate::error::SpanError> {
             let datetime = crate::datetime::DateTime::new(2023, 10, 09)?.with_time(12, 00, 00)?;

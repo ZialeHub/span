@@ -111,14 +111,15 @@ pub mod time {
 
         /// Setter for the format
         ///
-        /// None will set the format to [BASE_TIME_FORMAT](static@BASE_TIME_FORMAT)
-        ///
         ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
-        fn format(mut self, format: Option<impl ToString>) -> Self {
-            self.format = match format {
-                Some(format) => format.to_string(),
-                None => BASE_TIME_FORMAT.get().to_string(),
-            };
+        fn format(mut self, format: impl ToString) -> Self {
+            self.format = format.to_string();
+            self
+        }
+
+        /// Set the format to [BASE_TIME_FORMAT](static@BASE_TIME_FORMAT)
+        fn default_format(mut self) -> Self {
+            self.format = BASE_TIME_FORMAT.get().to_string();
             self
         }
 
@@ -432,7 +433,7 @@ pub mod time {
 
         #[test]
         fn time_serialize_format() -> Result<(), SpanError> {
-            let time = Time::new(12, 21, 46)?.format(Some("T%H_%M_%S"));
+            let time = Time::new(12, 21, 46)?.format("T%H_%M_%S");
             let Ok(serialized) = serde_json::to_string(&time) else {
                 panic!("Error while serializing time");
             };

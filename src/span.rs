@@ -9,7 +9,9 @@ where
 {
     fn new(_: F, _: u32, _: u32) -> Result<Self, SpanError>;
     /// Setter for the format of the span
-    fn format(self, format: Option<impl ToString>) -> Self;
+    fn format(self, format: impl ToString) -> Self;
+    /// Reset the format of the span to the default format
+    fn default_format(self) -> Self;
     /// Update the value of the span by a given Unit (U) and value.
     fn update(&self, unit: U, value: i32) -> Result<Self, SpanError>;
     /// Get the value of the span incremented by a given Unit (U).

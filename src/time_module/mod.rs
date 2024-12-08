@@ -61,29 +61,6 @@ pub mod time {
     }
 
     impl Time {
-        /// Getter for the time
-        pub fn time(&self) -> NaiveTime {
-            self.time
-        }
-
-        /// Return midnight [Time]
-        ///
-        /// # Example
-        ///
-        /// ```rust,ignore
-        /// assert_eq!(Time::new(00, 00, 00), Time::midnight())
-        /// assert_eq!(Time::new(00, 00, 00), Time::default())
-        /// ```
-        pub fn midnight() -> Self {
-            let time = NaiveTime::from_hms_opt(0, 0, 0).expect("Error Time midnight");
-            Self {
-                time,
-                format: BASE_TIME_FORMAT.get().to_string(),
-            }
-        }
-    }
-
-    impl Span<TimeUnit> for Time {
         /// Create a new variable [Time] from hour, minute and second
         ///
         /// Use the format [BASE_TIME_FORMAT](static@BASE_TIME_FORMAT) by default
@@ -109,6 +86,29 @@ pub mod time {
             })
         }
 
+        /// Getter for the time
+        pub fn time(&self) -> NaiveTime {
+            self.time
+        }
+
+        /// Return midnight [Time]
+        ///
+        /// # Example
+        ///
+        /// ```rust,ignore
+        /// assert_eq!(Time::new(00, 00, 00), Time::midnight())
+        /// assert_eq!(Time::new(00, 00, 00), Time::default())
+        /// ```
+        pub fn midnight() -> Self {
+            let time = NaiveTime::from_hms_opt(0, 0, 0).expect("Error Time midnight");
+            Self {
+                time,
+                format: BASE_TIME_FORMAT.get().to_string(),
+            }
+        }
+    }
+
+    impl Span<TimeUnit> for Time {
         /// Setter for the format
         ///
         ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
@@ -179,7 +179,7 @@ pub mod time {
         }
 
         /// Return the current [Time] from the system
-        pub fn now() -> Result<Self, SpanError> {
+        fn now() -> Result<Self, SpanError> {
             let time = Local::now();
             Self::new(time.hour(), time.minute(), time.second())
         }
@@ -532,9 +532,9 @@ pub mod time {
         fn unit_elapsed() -> Result<(), SpanError> {
             let time = Time::new(01, 34, 45)?;
             let rhs = Time::new(00, 00, 00)?;
-            let hours_in_between = time.unit_elapsed(&rhs, TimeUnit::Hour);
-            let minutes_in_between = time.unit_elapsed(&rhs, TimeUnit::Minute);
-            let seconds_in_between = time.unit_elapsed(&rhs, TimeUnit::Second);
+            let hours_in_between = time.unit_elapsed(&rhs, TimeUnit::Hour)?;
+            let minutes_in_between = time.unit_elapsed(&rhs, TimeUnit::Minute)?;
+            let seconds_in_between = time.unit_elapsed(&rhs, TimeUnit::Second)?;
             assert_eq!(hours_in_between, 1);
             assert_eq!(minutes_in_between, hours_in_between * 60 + 34);
             assert_eq!(seconds_in_between, minutes_in_between * 60 + 45);

@@ -7,9 +7,7 @@ pub trait Span<U>
 where
     Self: Sized,
 {
-    fn new(data: impl ToString, format: impl ToString) -> Result<Self, SpanError>;
-    fn build(data: impl ToString) -> Result<Self, SpanError>;
-    /// Setterfor the format of the span
+    /// Setter for the format of the span
     fn format(self, format: impl ToString) -> Self;
     /// Update the value of the span by a given Unit (U) and value.
     fn update(&self, unit: U, value: i32) -> Result<Self, SpanError>;

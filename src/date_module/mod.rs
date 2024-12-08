@@ -64,13 +64,6 @@ pub mod date {
     }
 
     impl Date {
-        /// Getter for the inner date
-        pub fn date(&self) -> NaiveDate {
-            self.date
-        }
-    }
-
-    impl Span<DateUnit> for Date {
         /// Create a new variable [Date] from year, month and day
         ///
         /// Use [BASE_DATE_FORMAT](static@BASE_DATE_FORMAT) as default format for date
@@ -94,6 +87,13 @@ pub mod date {
             })
         }
 
+        /// Getter for the inner date
+        pub fn date(&self) -> NaiveDate {
+            self.date
+        }
+    }
+
+    impl Span<DateUnit> for Date {
         /// Setter for the format
         ///
         ///  See the [chrono::format::strftime] for the supported escape sequences of `format`.
@@ -184,9 +184,8 @@ pub mod date {
 
         /// Return the current [Date] from the system
         fn now() -> Result<Self, SpanError> {
-          let now = Local::now();
+            let now = Local::now();
             Self::new(now.year(), now.month(), now.day())
-            Self::build(Local::now().format(BASE_DATE_FORMAT.get()))
         }
 
         /// Return a [bool] to know if the [Date] is in the future
@@ -660,6 +659,8 @@ mod datetime_into_date {
 
     #[cfg(test)]
     mod test {
+        use crate::span::Span;
+
         #[test]
         fn datetime_into_date() -> Result<(), crate::error::SpanError> {
             let datetime = crate::datetime::DateTime::new(2023, 10, 09)?.with_time(12, 00, 00)?;

@@ -28,10 +28,19 @@ pub mod date {
     /// Structure to handle date management
     ///
     /// Use [BASE_DATE_FORMAT](static@BASE_DATE_FORMAT) as default format for date
+    ///
+    /// By default, de/serialization is done with [BASE_DATE_FORMAT](static@BASE_DATE_FORMAT)
+    /// but you can change it with [deseriazize_with_format]/[serialize_with_format] methods
     #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone, Serialize, Deserialize)]
     pub struct Date {
         pub(crate) date: NaiveDate,
+        #[serde(skip)]
+        #[serde(default = "base_date_format")]
         pub(crate) format: String,
+    }
+
+    fn base_date_format() -> String {
+        BASE_DATE_FORMAT.get().to_string()
     }
 
     impl Default for Date {
@@ -277,6 +286,10 @@ pub mod date {
                 date,
                 format: self.format.clone(),
             })
+        }
+
+        fn get_format(&self) -> String {
+            self.format.clone()
         }
     }
 

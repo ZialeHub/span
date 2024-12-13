@@ -32,10 +32,19 @@ pub mod datetime {
     /// Structure to handle datetime management
     ///
     /// Use [BASE_DATETIME_FORMAT](static@BASE_DATETIME_FORMAT) as default format for datetime
-    #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone, Serialize, Deserialize)]
+    ///
+    /// By default, de/serialization is done with [BASE_DATETIME_FORMAT](static@BASE_DATETIME_FORMAT)
+    /// but you can change it with [deseriazize_with_format]/[serialize_with_format] methods
+    #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone, Deserialize, Serialize)]
     pub struct DateTime {
         pub(crate) datetime: NaiveDateTime,
+        #[serde(skip)]
+        #[serde(default = "base_datetime_format")]
         pub(crate) format: String,
+    }
+
+    fn base_datetime_format() -> String {
+        BASE_DATETIME_FORMAT.get().to_string()
     }
 
     impl Default for DateTime {
@@ -386,6 +395,10 @@ pub mod datetime {
                 datetime,
                 format: self.format.clone(),
             })
+        }
+
+        fn get_format(&self) -> String {
+            self.format.clone()
         }
     }
 

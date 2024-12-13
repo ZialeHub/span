@@ -28,10 +28,19 @@ pub mod time {
     /// Structure to handle time management
     ///
     /// Use [BASE_TIME_FORMAT](static@BASE_TIME_FORMAT) as default format for time
+    ///
+    /// By default, de/serialization is done with [BASE_TIME_FORMAT](static@BASE_TIME_FORMAT)
+    /// but you can change it with [deseriazize_with]/[serialize_with] methods
     #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Clone, Serialize, Deserialize)]
     pub struct Time {
         pub(crate) time: NaiveTime,
+        #[serde(skip)]
+        #[serde(default = "base_time_format")]
         pub(crate) format: String,
+    }
+
+    fn base_time_format() -> String {
+        BASE_TIME_FORMAT.get().to_string()
     }
 
     impl Default for Time {
@@ -257,6 +266,10 @@ pub mod time {
                 time,
                 format: self.format.clone(),
             })
+        }
+
+        fn get_format(&self) -> String {
+            self.format.clone()
         }
     }
 

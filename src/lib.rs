@@ -66,7 +66,7 @@ pub mod test {
 
     #[test]
     fn log_error_datetime_parse() {
-        let datetime = DateTime::new(2023, 10, 09);
+        let datetime = DateTime::new(2023, 10, 9);
         let _ = datetime.inspect_err(|e| {
             assert_eq!(
                 e.to_string(),
@@ -141,11 +141,11 @@ pub mod test {
     #[test]
     fn builder_format_default() -> Result<(), SpanError> {
         SpanBuilder::builder().build();
-        let datetime = datetime::DateTime::new(2023, 01, 01)?.with_time(12, 00, 00)?;
+        let datetime = datetime::DateTime::new(2023, 1, 1)?.with_time(12, 0, 0)?;
         assert_eq!(datetime.to_string(), "2023-01-01 12:00:00");
-        let date = date::Date::new(2023, 01, 01)?;
+        let date = date::Date::new(2023, 1, 1)?;
         assert_eq!(date.to_string(), "2023-01-01");
-        let time = time::Time::new(12, 00, 00)?;
+        let time = time::Time::new(12, 0, 0)?;
         assert_eq!(time.to_string(), "12:00:00");
         Ok(())
     }
@@ -160,9 +160,9 @@ pub mod test {
             .date_format("%d/%m/%Y")
             .time_format("%H_%M_%S")
             .build();
-        datetime::DateTime::new(2023, 01, 01)?.with_time(12, 00, 00)?;
-        date::Date::new(2023, 01, 01)?;
-        time::Time::new(12, 00, 00)?;
+        datetime::DateTime::new(2023, 1, 1)?.with_time(12, 0, 0)?;
+        date::Date::new(2023, 1, 1)?;
+        time::Time::new(12, 0, 0)?;
         Ok(())
     }
 
@@ -174,11 +174,11 @@ pub mod test {
             .date_format("%d/%m/%Y")
             .time_format("%H_%M_%S")
             .build();
-        datetime::DateTime::new(2023, 01, 01)?
-            .with_time(12, 00, 00)?
+        datetime::DateTime::new(2023, 1, 1)?
+            .with_time(12, 0, 0)?
             .format("%Y-%m-%d %H:%M:%S");
-        date::Date::new(2023, 01, 01)?.format("%Y-%m-%d");
-        time::Time::new(12, 00, 00)?.format("%H:%M:%S");
+        date::Date::new(2023, 1, 1)?.format("%Y-%m-%d");
+        time::Time::new(12, 0, 0)?.format("%H:%M:%S");
         Ok(())
     }
 
@@ -189,9 +189,9 @@ pub mod test {
             .date_format("%d/%m/%Y")
             .time_format("%H_%M_%S")
             .build();
-        datetime::DateTime::new(2023, 01, 01)?.with_time(12, 00, 00)?;
-        date::Date::new(2023, 01, 01)?;
-        time::Time::new(12, 00, 00)?;
+        datetime::DateTime::new(2023, 1, 1)?.with_time(12, 0, 0)?;
+        date::Date::new(2023, 1, 1)?;
+        time::Time::new(12, 0, 0)?;
         Ok(())
     }
 }

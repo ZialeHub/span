@@ -87,7 +87,7 @@ pub mod datetime {
             self.datetime.and_utc().timestamp()
         }
 
-        /// let datetime = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
+        /// let datetime = DateTime::new(2023, 10, 9)?.with_time(1, 1, 1)?;
         /// let datetime = datetime.clear_time()?;
         /// assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
         /// ```
@@ -104,7 +104,7 @@ pub mod datetime {
         /// # Example
         ///
         /// ```rust,ignore
-        /// let datetime = DateTime::new(2023, 05, 17)?.with_time(09, 05, 12)?;
+        /// let datetime = DateTime::new(2023, 5, 17)?.with_time(9, 5, 12)?;
         /// ```
         ///
         /// # Errors
@@ -129,7 +129,7 @@ pub mod datetime {
         /// # Example
         ///
         /// ```rust,ignore
-        /// let datetime = DateTime::new(2024, 09, 27)?;
+        /// let datetime = DateTime::new(2024, 9, 27)?;
         /// ```
         ///
         /// # Errors
@@ -164,7 +164,7 @@ pub mod datetime {
         ///
         /// # Example
         /// ```rust,ignore
-        /// let mut datetime = DateTime::new(2023, 10, 09)?;
+        /// let mut datetime = DateTime::new(2023, 10, 9)?;
         ///
         /// datetime.update(DateTimeUnit::Year, 1)?;
         /// assert_eq!(datetime.to_string(), "2024-10-09 00:00:00".to_string());
@@ -211,8 +211,7 @@ pub mod datetime {
                     format: self.format.clone(),
                 }),
                 None => Err(SpanError::InvalidUpdate(format!(
-                    "Cannot Add/Remove {} {:?} to/from {}",
-                    value, unit, self
+                    "Cannot Add/Remove {value} {unit:?} to/from {self}"
                 )))
                 .err_ctx(DateTimeError),
             }
@@ -222,11 +221,11 @@ pub mod datetime {
         ///
         /// # Example
         /// ```rust,ignore
-        /// let mut datetime = DateTime::new(2023, 01, 31)?.with_time(12, 09, 27)?;
+        /// let mut datetime = DateTime::new(2023 1, 31)?.with_time(12, 9, 27)?;
         /// datetime.next(DateTimeUnit::Month);
         /// assert_eq!(datetime.to_string(), "2023-02-28 12:09:27".to_string());
         ///
-        /// let mut datetime = DateTime::new(2023, 10, 09)?;
+        /// let mut datetime = DateTime::new(2023, 10, 9)?;
         /// datetime.next(DateTimeUnit::Month);
         /// assert_eq!(datetime.to_string(), "2023-11-09 00:00:00".to_string());
         /// ```
@@ -241,7 +240,7 @@ pub mod datetime {
         ///
         /// # Example
         /// ```rust,ignore
-        /// let datetime = DateTime::new(2023, 10, 09)?.with_time(05, 23, 18)?;
+        /// let datetime = DateTime::new(2023, 10, 9)?.with_time(5, 23, 18)?;
         /// assert!(datetime.matches(DateTimeUnit::Year, 2023));
         /// assert!(datetime.matches(DateTimeUnit::Month, 10));
         /// assert!(!datetime.matches(DateTimeUnit::Minute, 53));
@@ -271,11 +270,11 @@ pub mod datetime {
         ///
         /// # Example
         /// ```rust,ignore
-        /// let datetime = DateTime::new(2023, 10, 09)?.with_time(05, 23, 18)?;
+        /// let datetime = DateTime::new(2023, 10, 9)?.with_time(5, 23, 18)?;
         /// // If Now is 2024-01-01 00:00:00
         /// assert!(!datetime.is_in_future()?);
         ///
-        /// let datetime = DateTime::new(2025, 01, 09)?.with_time(02, 01, 15)?;
+        /// let datetime = DateTime::new(2025 1, 9)?.with_time(2 1, 15)?;
         /// // If Now is 2024-01-01 00:00:00
         /// assert!(datetime.is_in_future()?);
         /// ```
@@ -293,8 +292,8 @@ pub mod datetime {
         ///
         /// # Example
         /// ```rust,ignore
-        /// let rhs = DateTime::new(2023, 10, 09)?;
-        /// let lhs = DateTime::new(2022, 10, 09)?;
+        /// let rhs = DateTime::new(2023, 10, 9)?;
+        /// let lhs = DateTime::new(2022, 10, 9)?;
         /// assert_eq!(rhs.elapsed(&lhs), TimeDelta::try_days(365).unwrap());
         /// ```
         fn elapsed(&self, lhs: &Self) -> Duration {
@@ -305,7 +304,7 @@ pub mod datetime {
         ///
         /// # Example
         /// ```rust,ignore
-        /// let lhs = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
+        /// let lhs = DateTime::new(2023, 10, 9)?.with_time(1, 1, 1)?;
         /// let rhs = DateTime::new(2023, 10, 08)?;
         /// let years_in_between = lhs.unit_elapsed(&rhs, DateTimeUnit::Year);
         /// let months_in_between = lhs.unit_elapsed(&rhs, DateTimeUnit::Month);
@@ -528,7 +527,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_add_overflow() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Day, i32::MAX);
             assert_eq!(
                 new_datetime,
@@ -542,7 +541,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_add_one_year() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Year, 1)?;
             assert_eq!(new_datetime.to_string(), "2024-10-09 00:00:00".to_string());
             Ok(())
@@ -550,7 +549,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_remove_one_year() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Year, -1)?;
             assert_eq!(new_datetime.to_string(), "2022-10-09 00:00:00".to_string());
             Ok(())
@@ -558,7 +557,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_add_one_month() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Month, 1)?;
             assert_eq!(new_datetime.to_string(), "2023-11-09 00:00:00".to_string());
             Ok(())
@@ -566,7 +565,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_remove_one_month() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Month, -1)?;
             assert_eq!(new_datetime.to_string(), "2023-09-09 00:00:00".to_string());
             Ok(())
@@ -574,7 +573,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_add_one_day() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Day, 1)?;
             assert_eq!(new_datetime.to_string(), "2023-10-10 00:00:00".to_string());
             Ok(())
@@ -582,7 +581,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_remove_one_day() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Day, -1)?;
             assert_eq!(new_datetime.to_string(), "2023-10-08 00:00:00".to_string());
             Ok(())
@@ -590,7 +589,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_add_one_hour() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Hour, 1)?;
             assert_eq!(new_datetime.to_string(), "2023-10-09 01:00:00".to_string());
             Ok(())
@@ -598,7 +597,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_remove_one_hour() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Hour, -1)?;
             assert_eq!(new_datetime.to_string(), "2023-10-08 23:00:00".to_string());
             Ok(())
@@ -606,7 +605,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_add_one_minute() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Minute, 1)?;
             assert_eq!(new_datetime.to_string(), "2023-10-09 00:01:00".to_string());
             Ok(())
@@ -614,7 +613,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_remove_one_minute() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Minute, -1)?;
             assert_eq!(new_datetime.to_string(), "2023-10-08 23:59:00".to_string());
             Ok(())
@@ -622,7 +621,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_add_one_second() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Second, 1)?;
             assert_eq!(new_datetime.to_string(), "2023-10-09 00:00:01".to_string());
             Ok(())
@@ -630,7 +629,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_remove_one_second() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let new_datetime = datetime.update(DateTimeUnit::Second, -1)?;
             assert_eq!(new_datetime.to_string(), "2023-10-08 23:59:59".to_string());
             Ok(())
@@ -638,7 +637,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_serialize() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
             let Ok(serialized) = serde_json::to_string(&datetime) else {
                 panic!("Error while serializing datetime");
             };
@@ -665,7 +664,7 @@ pub mod datetime {
 
         #[test]
         fn datetime_serialize_format() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?.format("%d/%m/%YT%H_%M_%S");
+            let datetime = DateTime::new(2023, 10, 9)?.format("%d/%m/%YT%H_%M_%S");
             let Ok(serialized) = serde_json::to_string(&datetime) else {
                 panic!("Error while serializing datetime");
             };
@@ -697,7 +696,7 @@ pub mod datetime {
                 begin_at: DateTime,
             }
             let test = Test {
-                begin_at: DateTime::new(2023, 10, 09)?,
+                begin_at: DateTime::new(2023, 10, 9)?,
             };
             let Ok(serialized) = serde_json::to_string(&test) else {
                 panic!("Error while serializing datetime");
@@ -727,7 +726,7 @@ pub mod datetime {
 
         #[test]
         fn next_month_january_to_february() -> Result<(), SpanError> {
-            let mut datetime = DateTime::new(2023, 01, 31)?.with_time(12, 09, 27)?;
+            let mut datetime = DateTime::new(2023, 1, 31)?.with_time(12, 9, 27)?;
             datetime = datetime.next(DateTimeUnit::Month)?;
             assert_eq!(datetime.to_string(), "2023-02-28 12:09:27".to_string());
             Ok(())
@@ -735,7 +734,7 @@ pub mod datetime {
 
         #[test]
         fn next_month_february_to_march() -> Result<(), SpanError> {
-            let mut datetime = DateTime::new(2023, 02, 28)?.with_time(12, 09, 27)?;
+            let mut datetime = DateTime::new(2023, 2, 28)?.with_time(12, 9, 27)?;
             datetime = datetime.next(DateTimeUnit::Month)?;
             assert_eq!(datetime.to_string(), "2023-03-28 12:09:27".to_string());
             Ok(())
@@ -743,7 +742,7 @@ pub mod datetime {
 
         #[test]
         fn next_month() -> Result<(), SpanError> {
-            let mut datetime = DateTime::new(2023, 10, 09)?;
+            let mut datetime = DateTime::new(2023, 10, 9)?;
             datetime = datetime.next(DateTimeUnit::Month)?;
             assert_eq!(datetime.to_string(), "2023-11-09 00:00:00".to_string());
             Ok(())
@@ -751,7 +750,7 @@ pub mod datetime {
 
         #[test]
         fn next_minute() -> Result<(), SpanError> {
-            let mut datetime = DateTime::new(2023, 10, 09)?;
+            let mut datetime = DateTime::new(2023, 10, 9)?;
             datetime = datetime.next(DateTimeUnit::Minute)?;
             assert_eq!(datetime.to_string(), "2023-10-09 00:01:00".to_string());
             Ok(())
@@ -759,7 +758,7 @@ pub mod datetime {
 
         #[test]
         fn next_month_on_december() -> Result<(), SpanError> {
-            let mut datetime = DateTime::new(2023, 12, 09)?;
+            let mut datetime = DateTime::new(2023, 12, 9)?;
             datetime = datetime.next(DateTimeUnit::Month)?;
             assert_eq!(datetime.to_string(), "2024-01-09 00:00:00".to_string());
             Ok(())
@@ -767,7 +766,7 @@ pub mod datetime {
 
         #[test]
         fn next_hour_on_midnight() -> Result<(), SpanError> {
-            let mut datetime = DateTime::new(2023, 10, 09)?.with_time(23, 59, 34)?;
+            let mut datetime = DateTime::new(2023, 10, 9)?.with_time(23, 59, 34)?;
             datetime = datetime.next(DateTimeUnit::Hour)?;
             assert_eq!(datetime.to_string(), "2023-10-10 00:59:34".to_string());
             Ok(())
@@ -775,7 +774,7 @@ pub mod datetime {
 
         #[test]
         fn next_day_28_february_leap_year() -> Result<(), SpanError> {
-            let mut datetime = DateTime::new(2024, 02, 28)?;
+            let mut datetime = DateTime::new(2024, 2, 28)?;
             datetime = datetime.next(DateTimeUnit::Day)?;
             assert_eq!(datetime.to_string(), "2024-02-29 00:00:00".to_string());
             Ok(())
@@ -783,7 +782,7 @@ pub mod datetime {
 
         #[test]
         fn next_day_28_february_non_leap_year() -> Result<(), SpanError> {
-            let mut datetime = DateTime::new(2023, 02, 28)?;
+            let mut datetime = DateTime::new(2023, 2, 28)?;
             datetime = datetime.next(DateTimeUnit::Day)?;
             assert_eq!(datetime.to_string(), "2023-03-01 00:00:00".to_string());
             Ok(())
@@ -791,7 +790,7 @@ pub mod datetime {
 
         #[test]
         fn matches_every_unit_in_datetime() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?.with_time(05, 23, 18)?;
+            let datetime = DateTime::new(2023, 10, 9)?.with_time(5, 23, 18)?;
             assert!(datetime.matches(DateTimeUnit::Year, 2023));
             assert!(datetime.matches(DateTimeUnit::Month, 10));
             assert!(datetime.matches(DateTimeUnit::Day, 9));
@@ -826,24 +825,24 @@ pub mod datetime {
 
         #[test]
         fn elapsed_one_year() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?;
-            let lhs = DateTime::new(2022, 10, 09)?;
+            let datetime = DateTime::new(2023, 10, 9)?;
+            let lhs = DateTime::new(2022, 10, 9)?;
             assert_eq!(datetime.elapsed(&lhs), TimeDelta::try_days(365).unwrap());
             Ok(())
         }
 
         #[test]
         fn elapsed_one_second() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?.with_time(00, 00, 01)?;
-            let lhs = DateTime::new(2023, 10, 09)?.with_time(00, 00, 00)?;
+            let datetime = DateTime::new(2023, 10, 9)?.with_time(0, 0, 1)?;
+            let lhs = DateTime::new(2023, 10, 9)?.with_time(0, 0, 0)?;
             assert_eq!(datetime.elapsed(&lhs), TimeDelta::try_seconds(1).unwrap());
             Ok(())
         }
 
         #[test]
         fn elapsed_multiple_units() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
-            let lhs = DateTime::new(2023, 10, 08)?;
+            let datetime = DateTime::new(2023, 10, 9)?.with_time(1, 1, 1)?;
+            let lhs = DateTime::new(2023, 10, 8)?;
             assert_eq!(
                 datetime.elapsed(&lhs),
                 TimeDelta::try_days(1)
@@ -860,8 +859,8 @@ pub mod datetime {
 
         #[test]
         fn unit_elapsed() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
-            let rhs = DateTime::new(2023, 10, 08)?.with_time(00, 00, 00)?;
+            let datetime = DateTime::new(2023, 10, 9)?.with_time(1, 1, 1)?;
+            let rhs = DateTime::new(2023, 10, 8)?.with_time(0, 0, 0)?;
             let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year)?;
             let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month)?;
             let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day)?;
@@ -879,8 +878,8 @@ pub mod datetime {
 
         #[test]
         fn unit_elapsed_leap_year_days() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2024, 03, 12)?;
-            let rhs = DateTime::new(2024, 01, 12)?;
+            let datetime = DateTime::new(2024, 3, 12)?;
+            let rhs = DateTime::new(2024, 1, 12)?;
             let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year)?;
             let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month)?;
             let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day)?;
@@ -892,8 +891,8 @@ pub mod datetime {
 
         #[test]
         fn unit_elapsed_non_leap_year_days() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 03, 12)?;
-            let rhs = DateTime::new(2023, 01, 12)?;
+            let datetime = DateTime::new(2023, 3, 12)?;
+            let rhs = DateTime::new(2023, 1, 12)?;
             let years_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Year)?;
             let months_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Month)?;
             let days_in_between = datetime.unit_elapsed(&rhs, DateTimeUnit::Day)?;
@@ -905,7 +904,7 @@ pub mod datetime {
 
         #[test]
         fn clear_time() -> Result<(), SpanError> {
-            let datetime = DateTime::new(2023, 10, 09)?.with_time(01, 01, 01)?;
+            let datetime = DateTime::new(2023, 10, 9)?.with_time(1, 1, 1)?;
             let datetime = datetime.clear_time();
             assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
             Ok(())
@@ -978,7 +977,7 @@ mod date_into_datetime {
     ///
     /// # Example
     /// ```rust,ignore
-    /// let date = crate::date::Date::new(2023, 10, 09)?;
+    /// let date = crate::date::Date::new(2023, 10, 9)?;
     /// let datetime = crate::datetime::DateTime::try_from(date)?;
     /// assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
     /// ```
@@ -998,7 +997,7 @@ mod date_into_datetime {
 
         #[test]
         fn date_into_datetime() -> Result<(), crate::error::SpanError> {
-            let date = crate::date::Date::new(2023, 10, 09)?;
+            let date = crate::date::Date::new(2023, 10, 9)?;
             let datetime = crate::datetime::DateTime::from(date);
             assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
             Ok(())
@@ -1007,11 +1006,11 @@ mod date_into_datetime {
         #[test]
         #[ignore]
         fn date_into_datetime_wrong_format() -> Result<(), crate::error::SpanError> {
-            let _span_builder = crate::builder::SpanBuilder::builder()
+            crate::builder::SpanBuilder::builder()
                 .datetime_format("%Y-%m-%d %H:%M:%S")
                 .date_format("%d/%m/%Y")
                 .build();
-            let date = crate::date::Date::new(2023, 10, 09)?;
+            let date = crate::date::Date::new(2023, 10, 9)?;
             let datetime = crate::datetime::DateTime::from(date);
             assert_eq!(datetime.to_string(), "2023-10-09 00:00:00".to_string());
             Ok(())
@@ -1058,7 +1057,7 @@ mod time_into_datetime {
         #[test]
         #[ignore]
         fn time_into_datetime_wrong_format() -> Result<(), crate::error::SpanError> {
-            let _span_builder = crate::builder::SpanBuilder::builder()
+            crate::builder::SpanBuilder::builder()
                 .datetime_format("%Y-%m-%d %H_%M_%S")
                 .time_format("%H:%M:%S")
                 .build();

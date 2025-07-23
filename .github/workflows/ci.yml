@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - synchronize
+      - reopened
+    paths:
+        - '**/*.rs'
+  push:
+    paths:
+      - '**/*.rs'
+    branches:
+      - main
+
+jobs:
+  lints:
+    uses: ryse-rs/.workflows/.github/workflows/clippy.yml@main
+
+  health:
+    uses: ryse-rs/.workflows/.github/workflows/health.yml@main
+
+  build-debug:
+    uses: ryse-rs/.workflows/.github/workflows/build-debug.yml@main
+
+  tests:
+    needs: build-debug
+    uses: ryse-rs/.workflows/.github/workflows/test.yml@main
+    secrets: inherit

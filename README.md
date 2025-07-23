@@ -1,18 +1,51 @@
-[![Rust CI](https://github.com/ryse-rs/span/actions/workflows/ci-main.yaml/badge.svg)](https://github.com/ryse-rs/span/actions/workflows/ci-main.yaml)
+[![ci](https://github.com/ryse-rs/span/actions/workflows/ci.yaml/badge.svg)](https://github.com/ryse-rs/span/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/ryse-rs/span/graph/badge.svg?token=E7HLJRBTXZ)](https://codecov.io/gh/ryse-rs/span)
 
-# What is span?
+### 📦 Project: `span`
 
-Span is a rust time management library. It encapsulates commonly used libs such as `chrono` and adds up nice features.
+##### ❓ What is it?
 
-Span allows to create, update, compare and display custom formats of `Time`, `Date` or `Datetime` with ease.
+Span is a rust library designed to make time management easy.  
+It encapsulates commonly used libs such as `chrono` and adds up nice features.
+
+Span allows to create, update, compare and display custom formats of `Time`, `Date` or `Datetime` with ease, while setting default de/serialization and timezone options.
+
+##### 🔭 What is our vision for this project?
+
+Replace the usage of any other time-related library.
+
+##### 🚨 What problem does it solve?
+
+Time management is hard: setting up, operations, de/serialization, timezones... Span provides a simple API relying on the builder pattern, to easily perform all imaginable operations.
+
+##### 🎯 Who is it for?
+
+Developers.
+
+- Whenever you want to perform time-related operations.
+- Whenever you want to use serde on time-related strings and fields.
+- As a full replacement for the `chrono` library.
+
+
+### ✨ Features
+
+By default _span_ can be used to manage `time`, `date` or `datetime`, but you're free to select features for your app.
+
+- (Default)`["full"]`
+- `["time"]`
+- `["date"]`
+- `["datetime"]`
+
+### 🚀 Usage
+
+Run `cargo add span` to your crate.
 
 Each enum represents a different unit of time:
 - `TimeUnit::Hour/Minute/Second`
 - `DateUnit::Year/Month/Day`
 - `DateTimeUnit::Year/Month/Day/Hour/Minute/Second`
 
-# Builder
+#### Builder
 
 We provide a `SpanBuilder` to set a custom date format. This leads to less boilerplate for each date calls, and improved consistency through the entire application.
 Formats are defined based on a `strftime` inspired date and time formatting syntax.
@@ -22,16 +55,7 @@ Here is the default format for each type:
 - Date => `"%Y-%m-%d"`
 - DateTime => `format!("{} {}", BASE_DATE_FORMAT, BASE_TIME_FORMAT)`
 
-# Features
-
-By default _span_ can be used to manage `time`, `date` or `datetime`, but you're free to select features for your app.
-
-- (Default)`["full"]`
-- `["time"]`
-- `["date"]`
-- `["datetime"]`
-
-# Examples
+### 👀 Examples
 
 ```rust
 let _span = crate::builder::SpanBuilder::builder()
@@ -67,3 +91,20 @@ assert!(!is_in_future);
 eprintln!("DateTime == '{}'", datetime);
 // "DateTime == '2024-11-30 06:32:28'"
 ```
+
+### 🤝 Contributing
+
+Please read our [CONTRIBUTING](https://github.com/ryse-rs/.github/blob/CONTRIBUTING.md) and [GOVERNANCE](https://github.com/ryse-rs/.github/blob/GOVERNANCE.md) documents for details on our workflow and policies.
+
+Please always perform the following checks before committing:  
+1. ⚙️ `cargo build --workspace --all --all-features --tests`
+2. 🧼 `cargo fmt --all`
+3. 🩺 `cargo clippy --workspace --all --all-features --tests -- -D warnings`
+4. 🧪 `cargo test --all-targets --all-features --workspace`
+
+### 📄 License - Proprietary
+
+Copyright © 2025 Ryse.  
+All rights reserved.
+
+See __NOTICE__.

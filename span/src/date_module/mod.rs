@@ -9,9 +9,9 @@ pub mod date {
     use serde::{Deserialize, Serialize};
 
     use crate::{
+        BaseFormat, GetInner,
         error::{DateError, ErrorContext, SpanError},
         span::Span,
-        BaseFormat, GetInner,
     };
 
     pub(crate) static BASE_DATE_FORMAT: BaseFormat<&'static str> =

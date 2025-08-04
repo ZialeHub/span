@@ -9,10 +9,10 @@ pub mod datetime {
     use serde::{Deserialize, Serialize};
 
     use crate::{
+        BaseFormat, GetInner,
         error::{DateTimeError, ErrorContext, SpanError},
         span::Span,
         timestamp::{TimestampMicro, TimestampMilli, TimestampNano},
-        BaseFormat, GetInner,
     };
 
     pub(crate) static BASE_DATETIME_FORMAT: BaseFormat<Option<&'static str>> =

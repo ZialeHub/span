@@ -9,9 +9,9 @@ pub mod time {
     use serde::{Deserialize, Serialize};
 
     use crate::{
+        BaseFormat, GetInner,
         error::{ErrorContext, SpanError, TimeError},
         span::Span,
-        BaseFormat, GetInner,
     };
 
     pub(crate) static BASE_TIME_FORMAT: BaseFormat<&'static str> =

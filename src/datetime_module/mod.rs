@@ -399,6 +399,22 @@ pub mod datetime {
         fn get_format(&self) -> String {
             self.format.clone()
         }
+
+        fn deserialize_with_format<'de, D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+            Self: TryFrom<(String, String)>,
+        {
+            #[derive(Deserialize)]
+            struct Visitor {
+                datetime: String,
+                format: String,
+            }
+
+            let visitor: Visitor = Deserialize::deserialize(deserializer)?;
+            Self::try_from((visitor.datetime, visitor.format))
+                .map_err(|_| serde::de::Error::custom("Invalid datetime"))
+        }
     }
 
     impl From<NaiveDateTime> for DateTime {
@@ -643,17 +659,14 @@ pub mod datetime {
             };
             assert_eq!(
                 serialized,
-                "{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%Y-%m-%d %H:%M:%S\"}"
-                    .to_string()
+                "{\"datetime\":\"2023-10-09T00:00:00\"}".to_string()
             );
             Ok(())
         }
 
         #[test]
         fn datetime_deserialize() -> Result<(), SpanError> {
-            let serialized =
-                "{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%Y-%m-%d %H:%M:%S\"}"
-                    .to_string();
+            let serialized = "{\"datetime\":\"2023-10-09T00:00:00\"}".to_string();
             let Ok(datetime) = serde_json::from_str::<DateTime>(&serialized) else {
                 panic!("Error while deserializing datetime");
             };
@@ -670,22 +683,27 @@ pub mod datetime {
             };
             assert_eq!(
                 serialized,
-                "{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%d/%m/%YT%H_%M_%S\"}"
-                    .to_string()
+                "{\"datetime\":\"2023-10-09T00:00:00\"}".to_string()
             );
             Ok(())
         }
 
         #[test]
         fn datetime_deserialize_format() -> Result<(), SpanError> {
+            #[derive(Deserialize)]
+            struct CustomFmt(
+                #[serde(deserialize_with = "DateTime::deserialize_with_format")] DateTime,
+            );
             let serialized =
-                "{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%d/%m/%YT%H_%M_%S\"}"
+                "{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%Y-%m-%dT%H:%M:%S\"}"
                     .to_string();
-            let Ok(datetime) = serde_json::from_str::<DateTime>(&serialized) else {
+            let Ok(CustomFmt(datetime)) = serde_json::from_str::<CustomFmt>(&serialized) else {
                 panic!("Error while deserializing datetime");
             };
-            assert_eq!(datetime.to_string(), "09/10/2023T00_00_00".to_string());
-            assert_eq!(datetime.format, "%d/%m/%YT%H_%M_%S".to_string());
+            assert_eq!(
+                datetime.format("%d/%m/%YT%H_%M_%S").to_string(),
+                "09/10/2023T00_00_00".to_string()
+            );
             Ok(())
         }
 
@@ -702,9 +720,9 @@ pub mod datetime {
                 panic!("Error while serializing datetime");
             };
             assert_eq!(
-            serialized,
-            "{\"begin_at\":{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%Y-%m-%d %H:%M:%S\"}}".to_string()
-        );
+                serialized,
+                "{\"begin_at\":{\"datetime\":\"2023-10-09T00:00:00\"}}".to_string()
+            );
             Ok(())
         }
 
@@ -714,8 +732,7 @@ pub mod datetime {
             struct Test {
                 begin_at: DateTime,
             }
-            let serialized =
-            "{\"begin_at\":{\"datetime\":\"2023-10-09T00:00:00\",\"format\":\"%Y-%m-%d %H:%M:%S\"}}".to_string();
+            let serialized = "{\"begin_at\":{\"datetime\":\"2023-10-09T00:00:00\"}}".to_string();
             let Ok(test) = serde_json::from_str::<Test>(&serialized) else {
                 panic!("Error while deserializing datetime");
             };

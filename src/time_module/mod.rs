@@ -135,12 +135,15 @@ pub mod time {
         /// Function to increase / decrease the time [Time] by [TimeUnit]
         ///
         /// # Example
-        /// ```rust,ignore
-        /// let mut time = Time::new(0, 0, 0)?;
-        /// time.update(TimeUnit::Hour, 1);
-        /// time.update(TimeUnit::Minute, 4);
-        /// time.update(TimeUnit::Second, 30);
-        /// assert_eq!(time.to_string(), "01:04:30".to_string());
+        /// ```rust
+        /// use crate::span::time::{Time, TimeUnit};
+        /// use crate::span::prelude::Span;
+        ///
+        /// fn main() -> Result<(), span::error::SpanError> {
+        ///     let mut time = Time::new(0, 0, 0)?.update(TimeUnit::Hour, 1)?.update(TimeUnit::Minute, 4)?.update(TimeUnit::Second, 30)?;
+        ///     assert_eq!(time.to_string(), "01:04:30".to_string());
+        ///     Ok(())
+        /// }
         /// ```
         ///
         /// # Errors
@@ -269,6 +272,22 @@ pub mod time {
 
         fn get_format(&self) -> String {
             self.format.clone()
+        }
+
+        fn deserialize_with_format<'de, D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+            Self: TryFrom<(String, String)>,
+        {
+            #[derive(Deserialize)]
+            struct Visitor {
+                time: String,
+                format: String,
+            }
+
+            let visitor: Visitor = Deserialize::deserialize(deserializer)?;
+            Self::try_from((visitor.time, visitor.format))
+                .map_err(|_| serde::de::Error::custom("Invalid time"))
         }
     }
 
@@ -425,16 +444,13 @@ pub mod time {
             let Ok(serialized) = serde_json::to_string(&time) else {
                 panic!("Error while serializing time");
             };
-            assert_eq!(
-                serialized,
-                "{\"time\":\"12:21:46\",\"format\":\"%H:%M:%S\"}".to_string()
-            );
+            assert_eq!(serialized, "{\"time\":\"12:21:46\"}".to_string());
             Ok(())
         }
 
         #[test]
         fn time_deserialize() -> Result<(), SpanError> {
-            let serialized = "{\"time\":\"12:21:46\",\"format\":\"%H:%M:%S\"}".to_string();
+            let serialized = "{\"time\":\"12:21:46\"}".to_string();
             let Ok(time) = serde_json::from_str::<Time>(&serialized) else {
                 panic!("Error while deserializing time");
             };
@@ -449,21 +465,22 @@ pub mod time {
             let Ok(serialized) = serde_json::to_string(&time) else {
                 panic!("Error while serializing time");
             };
-            assert_eq!(
-                serialized,
-                "{\"time\":\"12:21:46\",\"format\":\"T%H_%M_%S\"}".to_string()
-            );
+            assert_eq!(serialized, "{\"time\":\"12:21:46\"}".to_string());
             Ok(())
         }
 
         #[test]
         fn time_deserialize_format() -> Result<(), SpanError> {
-            let serialized = "{\"time\":\"12:21:46\",\"format\":\"T%H_%M_%S\"}".to_string();
-            let Ok(time) = serde_json::from_str::<Time>(&serialized) else {
+            #[derive(Deserialize)]
+            struct CustomFmt(#[serde(deserialize_with = "Time::deserialize_with_format")] Time);
+            let serialized = "{\"time\":\"12.21.46\",\"format\":\"%H.%M.%S\"}".to_string();
+            let Ok(CustomFmt(time)) = serde_json::from_str::<CustomFmt>(&serialized) else {
                 panic!("Error while deserializing time");
             };
-            assert_eq!(time.to_string(), "T12_21_46".to_string());
-            assert_eq!(time.format, "T%H_%M_%S".to_string());
+            assert_eq!(
+                time.format("T%H_%M_%S").to_string(),
+                "T12_21_46".to_string()
+            );
             Ok(())
         }
 
@@ -481,7 +498,7 @@ pub mod time {
             };
             assert_eq!(
                 serialized,
-                "{\"begin_at\":{\"time\":\"23:10:09\",\"format\":\"%H:%M:%S\"}}".to_string()
+                "{\"begin_at\":{\"time\":\"23:10:09\"}}".to_string()
             );
             Ok(())
         }
@@ -492,8 +509,7 @@ pub mod time {
             struct Test {
                 begin_at: Time,
             }
-            let serialized =
-                "{\"begin_at\":{\"time\":\"23:10:09\",\"format\":\"%H:%M:%S\"}}".to_string();
+            let serialized = "{\"begin_at\":{\"time\":\"23:10:09\"}}".to_string();
             let Ok(test) = serde_json::from_str::<Test>(&serialized) else {
                 panic!("Error while deserializing time");
             };

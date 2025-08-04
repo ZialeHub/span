@@ -290,6 +290,22 @@ pub mod date {
         fn get_format(&self) -> String {
             self.format.clone()
         }
+
+        fn deserialize_with_format<'de, D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+            Self: TryFrom<(String, String)>,
+        {
+            #[derive(Deserialize)]
+            struct Visitor {
+                date: String,
+                format: String,
+            }
+
+            let visitor: Visitor = Deserialize::deserialize(deserializer)?;
+            Self::try_from((visitor.date, visitor.format))
+                .map_err(|_| serde::de::Error::custom("Invalid date"))
+        }
     }
 
     impl From<NaiveDateTime> for Date {
@@ -451,16 +467,13 @@ pub mod date {
             let Ok(serialized) = serde_json::to_string(&date) else {
                 panic!("Error while serializing date");
             };
-            assert_eq!(
-                serialized,
-                "{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}".to_string()
-            );
+            assert_eq!(serialized, "{\"date\":\"2023-10-09\"}".to_string());
             Ok(())
         }
 
         #[test]
         fn date_deserialize() -> Result<(), SpanError> {
-            let serialized = "{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}".to_string();
+            let serialized = "{\"date\":\"2023-10-09\"}".to_string();
             let Ok(date) = serde_json::from_str::<Date>(&serialized) else {
                 panic!("Error while deserializing date");
             };
@@ -475,17 +488,16 @@ pub mod date {
             let Ok(serialized) = serde_json::to_string(&date) else {
                 panic!("Error while serializing date");
             };
-            assert_eq!(
-                serialized,
-                "{\"date\":\"2023-10-09\",\"format\":\"%d/%m/%Y\"}".to_string()
-            );
+            assert_eq!(serialized, "{\"date\":\"2023-10-09\"}".to_string());
             Ok(())
         }
 
         #[test]
         fn date_deserialize_format() -> Result<(), SpanError> {
-            let serialized = "{\"date\":\"2023-10-09\",\"format\":\"%d/%m/%Y\"}".to_string();
-            let Ok(date) = serde_json::from_str::<Date>(&serialized) else {
+            #[derive(Deserialize)]
+            struct CustomFmt(#[serde(deserialize_with = "Date::deserialize_with_format")] Date);
+            let serialized = "{\"date\":\"09/10/2023\",\"format\":\"%d/%m/%Y\"}".to_string();
+            let Ok(CustomFmt(date)) = serde_json::from_str::<CustomFmt>(&serialized) else {
                 panic!("Error while deserializing date");
             };
             assert_eq!(date.to_string(), "09/10/2023".to_string());
@@ -507,7 +519,7 @@ pub mod date {
             };
             assert_eq!(
                 serialized,
-                "{\"begin_at\":{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}}".to_string()
+                "{\"begin_at\":{\"date\":\"2023-10-09\"}}".to_string()
             );
             Ok(())
         }
@@ -518,8 +530,7 @@ pub mod date {
             struct Test {
                 begin_at: Date,
             }
-            let serialized =
-                "{\"begin_at\":{\"date\":\"2023-10-09\",\"format\":\"%Y-%m-%d\"}}".to_string();
+            let serialized = "{\"begin_at\":{\"date\":\"2023-10-09\"}}".to_string();
             let Ok(test) = serde_json::from_str::<Test>(&serialized) else {
                 panic!("Error while deserializing date");
             };

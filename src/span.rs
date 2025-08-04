@@ -30,18 +30,7 @@ where
     fn deserialize_with_format<'de, D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
-        Self: TryFrom<(String, String)>,
-    {
-        #[derive(Deserialize)]
-        struct Visitor {
-            value: String,
-            format: String,
-        }
-
-        let visitor: Visitor = Deserialize::deserialize(deserializer)?;
-        Self::try_from((visitor.value, visitor.format))
-            .map_err(|_| serde::de::Error::custom("Invalid span"))
-    }
+        Self: Deserialize<'de>;
 
     fn serialize_with_format<S: Serializer>(value: &Self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -49,12 +38,12 @@ where
     {
         #[derive(Serialize)]
         struct Visitor {
-            value: String,
+            date: String,
             format: String,
         }
 
         let visitor = Visitor {
-            value: value.to_string(),
+            date: value.to_string(),
             format: value.get_format().clone(),
         };
         visitor.serialize(serializer)

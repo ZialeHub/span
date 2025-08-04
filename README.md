@@ -1,8 +1,6 @@
 [![ci](https://github.com/ryse-rs/span/actions/workflows/ci.yaml/badge.svg)](https://github.com/ryse-rs/span/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/ryse-rs/span/graph/badge.svg?token=E7HLJRBTXZ)](https://codecov.io/gh/ryse-rs/span)
 
-### 📦 Project: `span`
-
 ##### ❓ What is it?
 
 Span is a rust library designed to make time management easy.  
@@ -27,7 +25,7 @@ Developers.
 - As a full replacement for the `chrono` library.
 
 
-### ✨ Features
+## ✨ Features
 
 By default _span_ can be used to manage `time`, `date` or `datetime`, but you're free to select features for your app.
 
@@ -36,7 +34,7 @@ By default _span_ can be used to manage `time`, `date` or `datetime`, but you're
 - `["date"]`
 - `["datetime"]`
 
-### 🚀 Usage
+## 🚀 Usage
 
 Run `cargo add span` to your crate.
 
@@ -55,7 +53,7 @@ Here is the default format for each type:
 - Date => `"%Y-%m-%d"`
 - DateTime => `format!("{} {}", BASE_DATE_FORMAT, BASE_TIME_FORMAT)`
 
-### 👀 Examples
+## 👀 Examples
 
 ```rust
 let _span = crate::builder::SpanBuilder::builder()
@@ -92,7 +90,7 @@ eprintln!("DateTime == '{}'", datetime);
 // "DateTime == '2024-11-30 06:32:28'"
 ```
 
-### 🤝 Contributing
+## 🤝 Contributing
 
 Please read our [CONTRIBUTING](https://github.com/ryse-rs/.github/blob/CONTRIBUTING.md) and [GOVERNANCE](https://github.com/ryse-rs/.github/blob/GOVERNANCE.md) documents for details on our workflow and policies.
 
@@ -102,7 +100,7 @@ Please always perform the following checks before committing:
 3. 🩺 `cargo clippy --workspace --all --all-features --tests -- -D warnings`
 4. 🧪 `cargo test --all-targets --all-features --workspace`
 
-### 📄 License - Proprietary
+## 📄 License - Proprietary
 
 Copyright © 2025 Ryse.  
 All rights reserved.

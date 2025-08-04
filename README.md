@@ -1,4 +1,4 @@
-[![ci](https://github.com/ryse-rs/span/actions/workflows/ci.yaml/badge.svg)](https://github.com/ryse-rs/span/actions/workflows/ci.yaml)
+[![ci](https://github.com/ryse-rs/span/actions/workflows/ci.yml/badge.svg)](https://github.com/ryse-rs/span/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ryse-rs/span/graph/badge.svg?token=E7HLJRBTXZ)](https://codecov.io/gh/ryse-rs/span)
 
 ##### ❓ What is it?

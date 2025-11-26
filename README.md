@@ -1,11 +1,11 @@
-[![ci](https://github.com/ZialeHub/span/actions/workflows/ci.yml/badge.svg)](https://github.com/ZialeHub/span/actions/workflows/ci.yml)
+[![ci](https://github.com/ZialeHub/timeflow/actions/workflows/ci.yml/badge.svg)](https://github.com/ZialeHub/timeflow/actions/workflows/ci.yml)
 
 ##### ❓ What is it?
 
-Span is a rust library designed to make time management easy.  
+Timeflow is a rust library designed to make time management easy.  
 It encapsulates commonly used libs such as `chrono` and adds up nice features.
 
-Span allows to create, update, compare and display custom formats of `Time`, `Date` or `Datetime` with ease, while setting default de/serialization and timezone options.
+Timeflow allows to create, update, compare and display custom formats of `Time`, `Date` or `Datetime` with ease, while setting default de/serialization and timezone options.
 
 ##### 🔭 What is our vision for this project?
 
@@ -13,7 +13,7 @@ Replace the usage of any other time-related library.
 
 ##### 🚨 What problem does it solve?
 
-Time management is hard: setting up, operations, de/serialization, timezones... Span provides a simple API relying on the builder pattern, to easily perform all imaginable operations.
+Time management is hard: setting up, operations, de/serialization, timezones... Timeflow provides a simple API relying on the builder pattern, to easily perform all imaginable operations.
 
 ##### 🎯 Who is it for?
 
@@ -35,7 +35,7 @@ By default _span_ can be used to manage `time`, `date` or `datetime`, but you're
 
 ## 🚀 Usage
 
-Run `cargo add span` to your crate.
+Run `cargo add timeflow` to your crate.
 
 Each enum represents a different unit of time:
 - `TimeUnit::Hour/Minute/Second`
@@ -54,7 +54,7 @@ Here is the default format for each type:
 
 ## 👀 Examples
 
-```rust
+```rust,ignore
 let _span = crate::builder::SpanBuilder::builder()
     .date_format("%d %m %Y")
     .time_format("T%H:%M:%SZ.000")

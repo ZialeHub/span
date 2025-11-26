@@ -1,5 +1,5 @@
 [workspace]
-members = ["span"]
+members = ["timeflow"]
 resolver = "2"
 
 [workspace.package]
@@ -8,6 +8,6 @@ edition = "2024"
 authors = ["ZialeHub", "gpoblon"]
 readme = "README.md"
 license-file = "LICENSE"
-homepage = "https://github.com/ZialeHub/span"
-repository = "https://github.com/ZialeHub/span"
+homepage = "https://github.com/ZialeHub/timeflow"
+repository = "https://github.com/ZialeHub/timeflow"
 keywords = ["span", "date", "time", "datetime", "duration"]

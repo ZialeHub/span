@@ -1,5 +1,5 @@
 [package]
-name = "span"
+name = "timeflow"
 description = "Ergonomic time handling (and traveling!) library with builder patterns, custom formatting, and seamless serialization for Date, Time, and DateTime operations"
 version.workspace = true
 edition.workspace = true

@@ -134,10 +134,10 @@ impl Span<TimeUnit, u32> for Time {
     ///
     /// # Example
     /// ```rust
-    /// use crate::span::time::{Time, TimeUnit};
-    /// use crate::span::prelude::Span;
+    /// use crate::timeflow::time::{Time, TimeUnit};
+    /// use crate::timeflow::prelude::Span;
     ///
-    /// fn main() -> Result<(), span::error::SpanError> {
+    /// fn main() -> Result<(), timeflow::error::SpanError> {
     ///     let mut time = Time::new(0, 0, 0)?.update(TimeUnit::Hour, 1)?.update(TimeUnit::Minute, 4)?.update(TimeUnit::Second, 30)?;
     ///     assert_eq!(time.to_string(), "01:04:30".to_string());
     ///     Ok(())
